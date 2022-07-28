@@ -37,5 +37,12 @@
     <Image Include="resources\textures\gongzi.png">
       <Filter>资源文件</Filter>
     </Image>
+    <Image Include="resources\textures\ganyu.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\simpleCube.vert" />
+    <None Include="Shaders\simpleCube.frag" />
   </ItemGroup>
 </Project>

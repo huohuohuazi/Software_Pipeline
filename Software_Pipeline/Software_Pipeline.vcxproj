@@ -79,12 +79,12 @@
     <LibraryPath>C:\Applications\Vulkan\GLFW\lib-vc2022;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ReferencePath>C:\Applications\Vulkan\GLFW\include;$(ReferencePath)</ReferencePath>
-    <LibraryPath>C:\Applications\Vulkan\GLFW\lib-vc2022;$(LibraryPath)</LibraryPath>
+    <ReferencePath>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;$(ReferencePath)</ReferencePath>
+    <LibraryPath>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ReferencePath>C:\Applications\Vulkan\GLFW\include;$(ReferencePath)</ReferencePath>
-    <LibraryPath>C:\Applications\Vulkan\GLFW\lib-vc2022;$(LibraryPath)</LibraryPath>
+    <ReferencePath>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;$(ReferencePath)</ReferencePath>
+    <LibraryPath>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -92,13 +92,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalUsingDirectories>C:\Applications\Vulkan\GLFW\include;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
-      <AdditionalIncludeDirectories>C:\Applications\Vulkan\GLFW\include\glad;C:\Applications\Vulkan\GLFW\include;./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalUsingDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
+      <AdditionalIncludeDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Applications\Vulkan\GLFW\lib-vc2022;</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies)glfw3.lib;opengl32.lib;User32.lib;Gdi32.lib;Shell32.lib;glut32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -110,15 +110,15 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalUsingDirectories>C:\Applications\Vulkan\GLFW\include;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
-      <AdditionalIncludeDirectories>C:\Applications\Vulkan\GLFW\include\glad;C:\Applications\Vulkan\GLFW\include;./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalUsingDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
+      <AdditionalIncludeDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Applications\Vulkan\GLFW\lib-vc2022;</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies)glfw3.lib;opengl32.lib;User32.lib;Gdi32.lib;Shell32.lib;glut32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -168,7 +168,12 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\textures\cat.jpg" />
+    <Image Include="resources\textures\ganyu.jpg" />
     <Image Include="resources\textures\gongzi.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\simpleCube.frag" />
+    <None Include="Shaders\simpleCube.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
