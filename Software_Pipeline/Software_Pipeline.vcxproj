@@ -163,8 +163,11 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\stb_image.h" />
+    <ClInclude Include="src\Texture.h" />
+    <ClInclude Include="src\VBO.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\textures\cat.jpg" />
@@ -172,6 +175,10 @@
     <Image Include="resources\textures\gongzi.png" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shaders\simpleColor.frag" />
+    <None Include="Shaders\simpleColor.vert" />
+    <None Include="Shaders\simpleLight.frag" />
+    <None Include="Shaders\simpleLight.vert" />
     <None Include="Shaders\simpleCube.frag" />
     <None Include="Shaders\simpleCube.vert" />
   </ItemGroup>

@@ -29,6 +29,15 @@
     <ClInclude Include="src\stb_image.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\Camera.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Texture.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\VBO.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\textures\cat.jpg">
@@ -44,5 +53,9 @@
   <ItemGroup>
     <None Include="Shaders\simpleCube.vert" />
     <None Include="Shaders\simpleCube.frag" />
+    <None Include="Shaders\simpleLight.vert" />
+    <None Include="Shaders\simpleLight.frag" />
+    <None Include="Shaders\simpleColor.vert" />
+    <None Include="Shaders\simpleColor.frag" />
   </ItemGroup>
 </Project>
