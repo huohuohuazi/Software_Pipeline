@@ -11,8 +11,10 @@ uniform mat4 projection;
 
 void main()
 {
+    // 顶点位置
     FragPos = vec3(model * vec4(aPos, 1.0));
+    // 顶点法线
     Normal = mat3(transpose(inverse(model))) * aNormal;  
-    
+    // 于观察空间的位置
     gl_Position = projection * view * vec4(FragPos, 1.0);
 }
