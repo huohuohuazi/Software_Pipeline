@@ -201,6 +201,7 @@ int main(int argc, char* argv[])
        -0.5f,  0.5f,  0.5f,
        -0.5f,  0.5f, -0.5f,
     };
+    //float* vertice_prt = vertices;
     glm::vec3 lightPos(1.2f, 1.0f, 2.0f);//π‚‘¥Œª÷√
 
 #pragma endregion
@@ -208,21 +209,22 @@ int main(int argc, char* argv[])
     
 
     #pragma region VBO_
+ 
     unsigned int VBO, cubeVAO, lightCubeVAO;
     VBOmanager vbo(&VBO);
 
-    vbo.addStaticBuffer(vertices);
-
     vbo.addVAO(&cubeVAO);
-    vbo.addVertex(&cubeVAO, 3,vector<int>{3});
+    vbo.addStaticBuffer(VBO, vertices, sizeof(vertices));
+    vbo.BindVAO(cubeVAO);
+    vbo.addVertex(3, vector<int>{3});
 
-    
     vbo.addVAO(&lightCubeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    vbo.addVertex(&lightCubeVAO, 3, vector<int>{3});
+    vbo.BindVAO(lightCubeVAO);
+    vbo.addStaticBuffer(VBO);
+    vbo.addVertex(3, vector<int>{3});
 
-    std::cout << "VBO:" << VBO << ",cubeVAO:" << cubeVAO << ",lightCubeVAO:" << lightCubeVAO << std::endl;
-    std::cout << "VBO:" << sizeof(VBO) << ",cubeVAO:" << sizeof(cubeVAO) << ",lightCubeVAO:" << sizeof(lightCubeVAO) << std::endl;
+    //std::cout << "VBO:" << VBO << ",cubeVAO:" << cubeVAO << ",lightCubeVAO:" << lightCubeVAO << std::endl;
+    //std::cout << "VBO:" << sizeof(VBO) << ",cubeVAO:" << sizeof(cubeVAO) << ",lightCubeVAO:" << sizeof(lightCubeVAO) << std::endl;
 
 
 #pragma endregion
