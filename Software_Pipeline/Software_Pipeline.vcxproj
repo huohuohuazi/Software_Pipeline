@@ -171,6 +171,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\textures\cat.jpg" />
+    <Image Include="resources\textures\container2.png" />
     <Image Include="resources\textures\ganyu.jpg" />
     <Image Include="resources\textures\gongzi.png" />
   </ItemGroup>
@@ -183,6 +184,8 @@
     <None Include="Shaders\simpleLight.vert" />
     <None Include="Shaders\simpleCube.frag" />
     <None Include="Shaders\simpleCube.vert" />
+    <None Include="Shaders\simpleMaterial.frag" />
+    <None Include="Shaders\simpleMaterial.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

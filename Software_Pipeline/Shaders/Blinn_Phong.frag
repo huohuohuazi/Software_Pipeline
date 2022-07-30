@@ -22,7 +22,7 @@ void main()
     vec3 diffuse = diff * lightColor;// 漫反射光强*灯光颜色
     
     // specular项
-    float specularStrength = 0.5;
+    float specularStrength = 0.5; 
     vec3 viewDir = normalize(viewPos - FragPos);// 视角方向
     vec3 reflectDir = reflect(-lightDir, norm); // 高光反射方向
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);

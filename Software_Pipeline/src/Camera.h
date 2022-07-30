@@ -114,7 +114,7 @@ public:
         updateCameraVectors();
     }
 
-    // 处理鼠标移动事件
+    // 处理鼠标滚轮事件
     void ProcessMouseScroll(float yoffset)
     {
         Zoom -= (float)yoffset;
@@ -122,6 +122,12 @@ public:
             Zoom = 1.0f;
         if (Zoom > 45.0f)
             Zoom = 45.0f;
+    }
+
+    // 输出相机信息
+    void PrintState()
+    {
+        std::cout << "CameraInfo:\n Position=" << *value_ptr(Position) << " ,Front=" << *value_ptr(Front) << " ,Pitch=" << Pitch << endl;
     }
 
 private:

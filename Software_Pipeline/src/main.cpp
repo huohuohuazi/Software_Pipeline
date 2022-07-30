@@ -26,6 +26,7 @@
 
 #pragma region 函数声明
 
+    void DisplayCurrentState();
     void DisplayDeviceInfo();
     void framebuffer_size_callback(GLFWwindow* window, int width, int height);
     void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -43,6 +44,7 @@
     float lastFrame = 0.0f; // 上一帧的时间
 
     bool firstMouse = true;
+    int pressTime = 0;
 
     Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
@@ -97,7 +99,8 @@ int main(int argc, char* argv[])
     #pragma region 指定Shader
 
     // 加载shader
-    Shader cubeShader("Shaders/Blinn_Phong.vert", "Shaders/Blinn_Phong.frag");
+    //Shader cubeShader("Shaders/Blinn_Phong.vert", "Shaders/Blinn_Phong.frag");
+    Shader cubeShader("Shaders/simpleMaterial.vert", "Shaders/simpleMaterial.frag");
     Shader lightShader("Shaders/simpleLight.vert", "Shaders/simpleLight.frag");
 
     #pragma endregion
@@ -269,7 +272,7 @@ int main(int argc, char* argv[])
 
         // 渲染
         // 清除颜色缓冲与深度缓冲
-        glClearColor(0.0f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
@@ -279,6 +282,23 @@ int main(int argc, char* argv[])
         cubeShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
         cubeShader.setVec3("lightPos", lightPos);
         cubeShader.setVec3("viewPos", camera.Position);
+
+        cubeShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+        cubeShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
+        cubeShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+        cubeShader.setFloat("material.shininess", 32.0f);
+
+        glm::vec3 lightColor;
+        lightColor.x = sin(glfwGetTime() * 2.0f);
+        lightColor.y = sin(glfwGetTime() * 0.7f);
+        lightColor.z = sin(glfwGetTime() * 1.3f);
+
+        glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f); // 降低影响
+        glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // 很低的影响
+
+        cubeShader.setVec3("light.ambient", diffuseColor);
+        cubeShader.setVec3("light.diffuse", ambientColor); // 将光照调暗了一些以搭配场景
+        cubeShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);// 高光反射默认为白
 
         // MVP矩阵
         glm::mat4 model = glm::mat4(1.0f);
@@ -326,9 +346,15 @@ int main(int argc, char* argv[])
     
 }
 
-
-
-
+// 输出当前信息
+void DisplayCurrentState()
+{
+    if (pressTime==0)
+    {
+        camera.PrintState();
+        pressTime++;
+    }
+}
 
 // 打印设备信息
 void DisplayDeviceInfo()
@@ -400,4 +426,8 @@ void processInput(GLFWwindow* window)
         camera.ProcessKeyboard(UP, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
         camera.ProcessKeyboard(DOWN, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS)
+        DisplayCurrentState();
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE)
+        pressTime = 0;
 }
