@@ -57,5 +57,7 @@
     <None Include="Shaders\simpleLight.frag" />
     <None Include="Shaders\simpleColor.vert" />
     <None Include="Shaders\simpleColor.frag" />
+    <None Include="Shaders\Blinn_Phong.vert" />
+    <None Include="Shaders\Blinn_Phong.frag" />
   </ItemGroup>
 </Project>
