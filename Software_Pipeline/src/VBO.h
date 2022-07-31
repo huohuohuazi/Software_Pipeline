@@ -48,6 +48,7 @@ public:
 			std::cout << "sizeofData=" << size << endl;
 			glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
 		}	
+
 	}
 
 	// 开始输入VAO数据
@@ -65,8 +66,9 @@ public:
 		for (int i = 0; i < alloc.size(); i++)
 		{
 			// position attribute
-			std::cout << "i=" << i << " ,sum=" << sum << " ,maxLength=" << maxLength << endl;
-			glVertexAttribPointer(i, 3, GL_FLOAT, GL_FALSE, maxLength * sizeof(float), (void*)(sum));
+			//std::cout << "i=" << i << " ,sum=" << sum << " ,maxLength=" << maxLength << endl;
+			std::cout << i << " " << alloc[i] << " " << maxLength << " " << sum << endl;
+			glVertexAttribPointer(i, alloc[i], GL_FLOAT, GL_FALSE, maxLength * sizeof(float), (void*)(sum * sizeof(float)));
 			sum += alloc[i];
 			glEnableVertexAttribArray(i);
 		}

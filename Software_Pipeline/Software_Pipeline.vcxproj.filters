@@ -64,5 +64,7 @@
     <None Include="Shaders\Blinn_Phong.frag" />
     <None Include="Shaders\simpleMaterial.vert" />
     <None Include="Shaders\simpleMaterial.frag" />
+    <None Include="Shaders\simpleTexture.frag" />
+    <None Include="Shaders\simpleTexture.vert" />
   </ItemGroup>
 </Project>
