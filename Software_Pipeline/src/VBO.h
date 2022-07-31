@@ -65,10 +65,13 @@ public:
 
 		for (int i = 0; i < alloc.size(); i++)
 		{
-			// position attribute
-			//std::cout << "i=" << i << " ,sum=" << sum << " ,maxLength=" << maxLength << endl;
-			std::cout << i << " " << alloc[i] << " " << maxLength << " " << sum << endl;
+			//std::cout << i << " " << alloc[i] << " " << maxLength << " " << sum << endl;
 			glVertexAttribPointer(i, alloc[i], GL_FLOAT, GL_FALSE, maxLength * sizeof(float), (void*)(sum * sizeof(float)));
+			// 对于index=i(0,1,2...属性的索引),属性长度=alloc[i](vec2/vec3)
+			// type=float,是否标准化
+			// 步长=maxLength*sizeof(float)，一个顶点所包含数据所占的byte大小
+			// 该属性在步长里的偏移量为sum*sizeof(float)
+			
 			sum += alloc[i];
 			glEnableVertexAttribArray(i);
 		}

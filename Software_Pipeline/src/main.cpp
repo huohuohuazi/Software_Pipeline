@@ -163,24 +163,16 @@ int main(int argc, char* argv[])
 
 
 
-    #pragma region 设置VBO
- /*
+    #pragma region 设置VBO/VAO
+    //批量将顶点、图片等数据写入显存
+
     unsigned int VBO, cubeVAO, lightVAO;
+
+    // VBO是数据的集合，包括了顶点、索引、uv坐标等信息，整合发送给GPU显存
     VBOmanager vbo(&VBO);
 
-    // 待照射的物体
-    vbo.addVAO(&cubeVAO);
-    vbo.addStaticBuffer(VBO, vertices, sizeof(vertices));
-    vbo.BindVAO(cubeVAO);
-    vbo.addVertex(8, vector<int>{3,3,2});
-
-
-*/
-    unsigned int VBO, cubeVAO, lightVAO;
-    VBOmanager vbo(&VBO);
-
-    vbo.addVAO(&cubeVAO);
-    vbo.addStaticBuffer(VBO, vertices, sizeof(vertices));
+    vbo.addVAO(&cubeVAO);// VAO描述了如何将整合的信息分配给顶点着色器的各个属性
+    vbo.addStaticBuffer(VBO, vertices, sizeof(vertices));// 因为是static类型，因此只写入一次
     vbo.BindVAO(cubeVAO);
     vbo.addVertex(8, vector<int>{3, 3, 2});
 
@@ -191,11 +183,13 @@ int main(int argc, char* argv[])
     vbo.BindVAO(lightVAO);
     vbo.addVertex(8, vector<int>{3});
 
-    //Texture container2("resources / textures / container2.png");
+    // 纹理
     unsigned int diffuseMap_container2 = LoadTexture("resources/textures/container2.png");
-    //unsigned int diffuseMap_container2 = container2.textureID;
+    unsigned int specularMap_container2 = LoadTexture("resources/textures/container2_specular.png");
+
     cubeShader.use();
     cubeShader.setInt("material.diffuse", 0);
+    cubeShader.setInt("material.specular", 1);
 
 #pragma endregion
 
@@ -228,7 +222,7 @@ int main(int argc, char* argv[])
         cubeShader.setVec3("light.position", lightPos);
         cubeShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
         cubeShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f); // 将光照调暗了一些以搭配场景
-        cubeShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);// 高光反射默认为白
+        cubeShader.setVec3("light.specular", 1.0f, 0.0f, 0.0f);// 高光反射默认为白,这里设置为红色作为区分
 
         // MVP矩阵
         glm::mat4 model = glm::mat4(1.0f);
@@ -241,6 +235,9 @@ int main(int argc, char* argv[])
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap_container2);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, specularMap_container2);
+
 
         // render the cube
         glBindVertexArray(cubeVAO);
