@@ -14,12 +14,13 @@
     #include <GLM/gtc/matrix_transform.hpp>
     #include <GLM/gtc/type_ptr.hpp>
 
-    #define STB_IMAGE_IMPLEMENTATION
+    //#define STB_IMAGE_IMPLEMENTATION
 
     #include "Shader.h"
-    #include "src/Camera.h"
-    #include "stb_image.h"
-    #include "src/VBO.h"
+    #include "Model.h"
+    #include "Camera.h"
+    #include "VBO.h"
+    //#include "stb_image.h"
     //#include "src/Texture.h"
 
 #pragma endregion
@@ -58,52 +59,59 @@
 
 int main(int argc, char* argv[])
 {
+
     #pragma region 初始化窗口
 
-    //初始化窗口
-    glutInit(&argc, argv);
-    if (!glfwInit())
-    {
-        std::cout << "Failed to Initialize GLUT" << endl;
-        return -1;
-    }
+        //初始化窗口
+        glutInit(&argc, argv);
+        if (!glfwInit())
+        {
+            std::cout << "Failed to Initialize GLUT" << endl;
+            return -1;
+        }
    
-    GLFWwindow* window;
-    window = glfwCreateWindow(1280, 720, "Hello World", NULL, NULL);
+        GLFWwindow* window;
+        window = glfwCreateWindow(1280, 720, "Hello World", NULL, NULL);
 
 
-    if (!window){
-        std::cout << "Failed to create GLFW window" << endl;
-        glfwTerminate();
-        return -1;
-    }
+        if (!window){
+            std::cout << "Failed to create GLFW window" << endl;
+            glfwTerminate();
+            return -1;
+        }
 
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);// 窗口大小改变回调函数
-    glfwSetCursorPosCallback(window, mouse_callback);// 鼠标移动回调函数
-    glfwSetScrollCallback(window, scroll_callback);// 鼠标滚轮回调函数
-    // 隐藏光标
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
-        std::cout << "Failed to initialize GLAD" << std::endl;
-        return -1;
-    }
+        glfwMakeContextCurrent(window);
+        glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);// 窗口大小改变回调函数
+        glfwSetCursorPosCallback(window, mouse_callback);// 鼠标移动回调函数
+        glfwSetScrollCallback(window, scroll_callback);// 鼠标滚轮回调函数
+        // 隐藏光标
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    DisplayDeviceInfo();
+        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
+            std::cout << "Failed to initialize GLAD" << std::endl;
+            return -1;
+        }
 
-    // 开启深度测试
-    glEnable(GL_DEPTH_TEST);
+        DisplayDeviceInfo();
+
+        // 开启深度测试
+        glEnable(GL_DEPTH_TEST);
     
+        // 图片导入反转y轴
+        stbi_set_flip_vertically_on_load(true);
 
 #pragma endregion
 
+
+
     #pragma region 指定Shader
 
-    // 加载shader
-    //Shader cubeShader("Shaders/Blinn_Phong.vert", "Shaders/Blinn_Phong.frag");
-    Shader cubeShader("Shaders/simpleTexture.vert", "Shaders/simpleTexture.frag");
-    Shader lightShader("Shaders/simpleLight.vert", "Shaders/simpleLight.frag");
+        // 加载shader
+        //Shader cubeShader("Shaders/Blinn_Phong.vert", "Shaders/Blinn_Phong.frag");
+        Shader cubeShader("Shaders/simpleTexture.vert", "Shaders/simpleTexture.frag");
+        Shader lightShader("Shaders/simpleLight.vert", "Shaders/simpleLight.frag");
+        Shader modelShader("Shaders/simpleModel.vert", "Shaders/simpleModel.frag");
 
     #pragma endregion
 
@@ -111,170 +119,236 @@ int main(int argc, char* argv[])
 
     #pragma region 模型信息
 
-    float vertices[] = {
-        // positions          // normals           // texture coords
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
+        float vertices[] = {
+            // positions          // normals           // texture coords
+            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
+             0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
+             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
+             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
 
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
+             0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
+             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
+             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
 
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+            -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+            -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
 
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+             0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
+             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+             0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
 
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
+             0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
+             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
+             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
 
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
-    };
+            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+             0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
+             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
+             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
+        };
 
-    // 光源位置
-    glm::vec3 lightPos(1.2f, 1.0f, 2.0f);//光源位置
+
+        //Model nanosuitModel("resources/objects/nanosuit/nanosuit.obj");
+         Model nanosuitModel("resources/objects/chair/exp.obj");
+
+        // positions all containers
+        glm::vec3 cubePositions[] = {
+       glm::vec3(0.0f,  0.0f,  0.0f),
+       glm::vec3(2.0f,  5.0f, -15.0f),
+       glm::vec3(-1.5f, -2.2f, -2.5f),
+       glm::vec3(-3.8f, -2.0f, -12.3f),
+       glm::vec3(2.4f, -0.4f, -3.5f),
+       glm::vec3(-1.7f,  3.0f, -7.5f),
+       glm::vec3(1.3f, -2.0f, -2.5f),
+       glm::vec3(1.5f,  2.0f, -2.5f),
+       glm::vec3(1.5f,  0.2f, -1.5f),
+       glm::vec3(-1.3f,  1.0f, -1.5f)
+        };
+        // positions of the point lights
+        glm::vec3 pointLightPositions[] = {
+            glm::vec3(0.7f,  0.2f,  2.0f),
+            glm::vec3(2.3f, -3.3f, -4.0f),
+            glm::vec3(-4.0f,  2.0f, -12.0f),
+            glm::vec3(0.0f,  0.0f, -3.0f)
+        };
+
+        unsigned int diffuseMap = LoadTexture("resources/textures/container2.png");
+        unsigned int specularMap = LoadTexture("resources/textures/container2_specular.png");
+    
+    #pragma endregion
+
+        unsigned int VBO, cubeVAO;
+        glGenVertexArrays(1, &cubeVAO);
+        glGenBuffers(1, &VBO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+        glBindVertexArray(cubeVAO);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+
+        cubeShader.use();
+        cubeShader.setInt("material.diffuse", 0);
+        cubeShader.setInt("material.specular", 1);
+
+    #pragma region 绘制循环
+
+        std::cout << "BeginToLoop:" << endl;
+
+        while (!glfwWindowShouldClose(window))
+        {
+            // 先计算deltatime
+            float currentFrame = glfwGetTime();
+            deltaTime = currentFrame - lastFrame;
+            lastFrame = currentFrame;
+
+            // 输入
+            processInput(window);
+
+            // 渲染
+            // 清除颜色缓冲与深度缓冲
+            glClearColor(0.1f, 0.2f, 0.2f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            // 传入shader数据
+            cubeShader.use();
+        
+            cubeShader.setVec3("viewPos", camera.Position);
+            cubeShader.setFloat("material.shininess", 32.0f);
+
+            // MVP矩阵，M是transform变换
+            glm::mat4 model = glm::mat4(1.0f);
+            glm::mat4 view = camera.GetView();
+            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)1280 / (float)720, 0.1f, 100.0f);
+
+            cubeShader.setMat4("model", model);
+            cubeShader.setMat4("view", view);
+            cubeShader.setMat4("projection", projection);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, diffuseMap);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, specularMap);
+
+#pragma region Lighting
+            cubeShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+            cubeShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
+            cubeShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+            cubeShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+            // point light 1
+            cubeShader.setVec3("pointLights[0].position", pointLightPositions[0]);
+            cubeShader.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
+            cubeShader.setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
+            cubeShader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+            cubeShader.setFloat("pointLights[0].constant", 1.0f);
+            cubeShader.setFloat("pointLights[0].linear", 0.09f);
+            cubeShader.setFloat("pointLights[0].quadratic", 0.032f);
+            // point light 2
+            cubeShader.setVec3("pointLights[1].position", pointLightPositions[1]);
+            cubeShader.setVec3("pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
+            cubeShader.setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
+            cubeShader.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
+            cubeShader.setFloat("pointLights[1].constant", 1.0f);
+            cubeShader.setFloat("pointLights[1].linear", 0.09f);
+            cubeShader.setFloat("pointLights[1].quadratic", 0.032f);
+            // point light 3
+            cubeShader.setVec3("pointLights[2].position", pointLightPositions[2]);
+            cubeShader.setVec3("pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
+            cubeShader.setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
+            cubeShader.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
+            cubeShader.setFloat("pointLights[2].constant", 1.0f);
+            cubeShader.setFloat("pointLights[2].linear", 0.09f);
+            cubeShader.setFloat("pointLights[2].quadratic", 0.032f);
+            // point light 4
+            cubeShader.setVec3("pointLights[3].position", pointLightPositions[3]);
+            cubeShader.setVec3("pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
+            cubeShader.setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
+            cubeShader.setVec3("pointLights[3].specular", 1.0f, 1.0f, 1.0f);
+            cubeShader.setFloat("pointLights[3].constant", 1.0f);
+            cubeShader.setFloat("pointLights[3].linear", 0.09f);
+            cubeShader.setFloat("pointLights[3].quadratic", 0.032f);
+            // spotLight
+            cubeShader.setVec3("spotLight.position", camera.Position);
+            cubeShader.setVec3("spotLight.direction", camera.Front);
+            cubeShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+            cubeShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+            cubeShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+            cubeShader.setFloat("spotLight.constant", 1.0f);
+            cubeShader.setFloat("spotLight.linear", 0.09f);
+            cubeShader.setFloat("spotLight.quadratic", 0.032f);
+            cubeShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+            cubeShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
+
+#pragma endregion
+
+
+            glBindVertexArray(cubeVAO);
+            for (unsigned int i = 0; i < 10; i++)
+            {
+                // calculate the model matrix for each object and pass it to shader before drawing
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, cubePositions[i]);
+                float angle = 20.0f * i;
+                model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+                cubeShader.setMat4("model", model);
+
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+            }
+
+
+
+
+            // 使用shader绘制模型
+            modelShader.use();
+            modelShader.setMat4("model", model);
+            modelShader.setMat4("view", view);
+            modelShader.setMat4("projection", projection);
+            nanosuitModel.Draw(modelShader);
+
+
+
+            // 交换缓冲并查询IO事件
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+        };
 
     #pragma endregion
 
 
 
-    #pragma region 设置VBO/VAO
-    //批量将顶点、图片等数据写入显存
-
-    unsigned int VBO, cubeVAO, lightVAO;
-
-    // VBO是数据的集合，包括了顶点、索引、uv坐标等信息，整合发送给GPU显存
-    VBOmanager vbo(&VBO);
-
-    vbo.addVAO(&cubeVAO);// VAO描述了如何将整合的信息分配给顶点着色器的各个属性
-    vbo.addStaticBuffer(VBO, vertices, sizeof(vertices));// 因为是static类型，因此只写入一次
-    vbo.BindVAO(cubeVAO);
-    vbo.addVertex(8, vector<int>{3, 3, 2});
-
-    
-    // 光源
-    vbo.addVAO(&lightVAO);
-    vbo.addStaticBuffer(VBO);
-    vbo.BindVAO(lightVAO);
-    vbo.addVertex(8, vector<int>{3});
-
-    // 纹理
-    unsigned int diffuseMap_container2 = LoadTexture("resources/textures/container2.png");
-    unsigned int specularMap_container2 = LoadTexture("resources/textures/container2_specular.png");
-
-    cubeShader.use();
-    cubeShader.setInt("material.diffuse", 0);
-    cubeShader.setInt("material.specular", 1);
-
-#pragma endregion
-
-#pragma region 绘制循环
-
-    std::cout << "BeginToLoop:" << endl;
-
-    while (!glfwWindowShouldClose(window))
-    {
-        // 先计算deltatime
-        float currentFrame = glfwGetTime();
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
-
-        // 输入
-        processInput(window);
-
-        // 渲染
-        // 清除颜色缓冲与深度缓冲
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // 立方体shader
-        cubeShader.use();
-        cubeShader.setVec3("viewPos", camera.Position);
-
-        cubeShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
-        cubeShader.setFloat("material.shininess", 64.0f);
-
-        cubeShader.setVec3("light.position", lightPos);
-        cubeShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-        cubeShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f); // 将光照调暗了一些以搭配场景
-        cubeShader.setVec3("light.specular", 1.0f, 0.0f, 0.0f);// 高光反射默认为白,这里设置为红色作为区分
-
-        // MVP矩阵
-        glm::mat4 model = glm::mat4(1.0f);
-        glm::mat4 view = camera.GetView();
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)1280 / (float)720, 0.1f, 100.0f);
-
-        cubeShader.setMat4("model", model);
-        cubeShader.setMat4("view", view);
-        cubeShader.setMat4("projection", projection);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, diffuseMap_container2);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, specularMap_container2);
-
-
-        // render the cube
-        glBindVertexArray(cubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-        // 灯光shader
-        lightShader.use();
-
-        lightShader.setMat4("projection", projection);
-        lightShader.setMat4("view", view);
-
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, lightPos);
-        model = glm::scale(model, glm::vec3(0.2f));
-        lightShader.setMat4("model", model);
-
-        glBindVertexArray(lightVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-        // 交换缓冲并查询IO事件
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    };
-
-#pragma endregion
-
     // 释放资源
-    glDeleteVertexArrays(1, &cubeVAO);
-    glDeleteVertexArrays(1, &lightVAO);
-    glDeleteBuffers(1, &VBO);
+    //nanosuitModel.Release();
+
+
 
     glfwTerminate();
     std::cout << "Done" << endl;
     return 0;
     
 }
+
 
 // 输出当前信息
 void DisplayCurrentState()
@@ -400,6 +474,3 @@ unsigned int LoadTexture(char const* path)
     }
     return textureID;
 }
-
-
-

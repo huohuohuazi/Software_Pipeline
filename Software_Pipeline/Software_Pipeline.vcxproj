@@ -79,12 +79,14 @@
     <LibraryPath>C:\Applications\Vulkan\GLFW\lib-vc2022;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ReferencePath>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;$(ReferencePath)</ReferencePath>
+    <ReferencePath>$(ReferencePath)</ReferencePath>
     <LibraryPath>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ReferencePath>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;$(ReferencePath)</ReferencePath>
+    <ReferencePath>$(ReferencePath)</ReferencePath>
     <LibraryPath>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -92,14 +94,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalUsingDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
+      <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalIncludeDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies)glfw3.lib;opengl32.lib;User32.lib;Gdi32.lib;Shell32.lib;glut32.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies)glfw3.lib;opengl32.lib;User32.lib;Gdi32.lib;Shell32.lib;glut32.lib;assimp-vc143-mt.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -110,7 +112,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalUsingDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
+      <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalIncludeDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -119,7 +121,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies)glfw3.lib;opengl32.lib;User32.lib;Gdi32.lib;Shell32.lib;glut32.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies)glfw3.lib;opengl32.lib;User32.lib;Gdi32.lib;Shell32.lib;glut32.lib;assimp-vc143-mt.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -164,8 +166,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Camera.h" />
+    <ClInclude Include="src\Mesh.h" />
+    <ClInclude Include="src\Model.h" />
     <ClInclude Include="src\Shader.h" />
-    <ClInclude Include="src\stb_image.h" />
+    <ClInclude Include="include\stb_image.h" />
     <ClInclude Include="src\Texture.h" />
     <ClInclude Include="src\VBO.h" />
   </ItemGroup>
@@ -178,6 +182,8 @@
   <ItemGroup>
     <None Include="Shaders\Blinn_Phong.frag" />
     <None Include="Shaders\Blinn_Phong.vert" />
+    <None Include="Shaders\directionalLight.frag" />
+    <None Include="Shaders\directionalLight.vert" />
     <None Include="Shaders\simpleColor.frag" />
     <None Include="Shaders\simpleColor.vert" />
     <None Include="Shaders\simpleLight.frag" />
@@ -186,6 +192,8 @@
     <None Include="Shaders\simpleCube.vert" />
     <None Include="Shaders\simpleMaterial.frag" />
     <None Include="Shaders\simpleMaterial.vert" />
+    <None Include="Shaders\simpleModel.frag" />
+    <None Include="Shaders\simpleModel.vert" />
     <None Include="Shaders\simpleTexture.frag" />
     <None Include="Shaders\simpleTexture.vert" />
   </ItemGroup>

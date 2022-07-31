@@ -73,13 +73,14 @@ public:
         glLinkProgram(ID);
         checkCompileErrors(ID, "PROGRAM");
 
-        // 删除着色器，它们已经链接到我们的程序中了，已经不再需要了
+        // 删除着色器，它们已经加载到显存中了，删除掉内存中的shader
         glDeleteShader(vertex);
         glDeleteShader(fragment);
 
         std::cout << "Generate Shader SUCCUSS!\n" << std::endl;
 
     }
+
     // 使用/激活程序
     void use()
     {

@@ -7,7 +7,7 @@
 
 #include <iostream>
 #include "stb_image.h"
-
+/*
 class Texture
 {
 public:
@@ -50,5 +50,5 @@ public:
 	}
 };
 
-
+*/
 #endif

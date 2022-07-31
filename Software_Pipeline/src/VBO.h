@@ -63,7 +63,7 @@ public:
 		//glBindBuffer(GL_ARRAY_BUFFER, *_vbo);
 		int sum = 0;
 
-		for (int i = 0; i < alloc.size(); i++)
+		for (auto i = 0; i < alloc.size(); i++)
 		{
 			//std::cout << i << " " << alloc[i] << " " << maxLength << " " << sum << endl;
 			glVertexAttribPointer(i, alloc[i], GL_FLOAT, GL_FALSE, maxLength * sizeof(float), (void*)(sum * sizeof(float)));
