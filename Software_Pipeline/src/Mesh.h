@@ -21,12 +21,12 @@ struct Vertex {
     // 可以有多个uv映射关系，这里只放了一个
     // TexCoords是映射关系，不是纹理
 
-    //glm::vec3 Tangent;
+    glm::vec3 Tangent;
     // bitangent
-    //glm::vec3 Bitangent;
+    glm::vec3 Bitangent;
 
-    //int m_BoneIDs[MAX_BONE_INFLUENCE];// 影响顶点的骨骼ID
-    //float m_Weights[MAX_BONE_INFLUENCE];// 骨骼权重
+    int m_BoneIDs[MAX_BONE_INFLUENCE];// 影响顶点的骨骼ID
+    float m_Weights[MAX_BONE_INFLUENCE];// 骨骼权重
 };
 
 struct Texture {
@@ -51,6 +51,7 @@ private:
 
         /*--------------------------------------------------------------------------------------------*/
         
+        // cout << "Sizeof Vertex:" << sizeof(Vertex) << endl;
         // VBO是数据的集合，包括了顶点、索引、uv坐标等信息，整合发送给GPU显存
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
@@ -85,25 +86,25 @@ private:
         
         /*--------------------------------------------------------------------------------------------*/
 
-        //glEnableVertexAttribArray(3);
-        //glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
         
         /*--------------------------------------------------------------------------------------------*/
 
         // vertex bitangent
-        //glEnableVertexAttribArray(4);
-        //glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
         
         /*--------------------------------------------------------------------------------------------*/
 
         
         // 影响的骨骼
-        //glEnableVertexAttribArray(5);
-        //glVertexAttribIPointer(5, 4, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, m_BoneIDs));
+        glEnableVertexAttribArray(5);
+        glVertexAttribIPointer(5, 4, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, m_BoneIDs));
 
         // 权重
-        //glEnableVertexAttribArray(6);
-        //glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, m_Weights));
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, m_Weights));
 
         /*--------------------------------------------------------------------------------------------*/
 
@@ -127,6 +128,15 @@ public:
 
         setupMesh();
     }
+
+    Mesh(vector<Vertex> vertices, vector<unsigned int> indices)
+    {
+        this->vertices = vertices;
+        this->indices = indices;
+        //this->textures = textures;
+
+        setupMesh();
+    }
     
     void Draw(Shader shader)
     {
@@ -135,7 +145,9 @@ public:
         unsigned int normalNr = 1;
         unsigned int heightNr = 1;
 
+
         // 对于该mesh的所有纹理
+        //std::cout << "textures.size=" << textures.size() << endl;
         for (unsigned int i = 0; i < textures.size(); i++)
         {
             glActiveTexture(GL_TEXTURE0 + i); // 激活相应的纹理单元
@@ -145,14 +157,16 @@ public:
 
             if (name == "texture_diffuse")
                 number = std::to_string(diffuseNr++);
-            /*else if (name == "texture_specular")
+            else if (name == "texture_specular")
                 number = std::to_string(specularNr++);
             else if (name == "texture_normal")
                 number = std::to_string(normalNr++); 
             else if (name == "texture_height")
-                number = std::to_string(heightNr++);*/
+                number = std::to_string(heightNr++);
 
             // shader.setInt(("material." + name + number).c_str(), i);
+            // std::cout << "MaterialName : " << (name + number).c_str() <<endl;
+
             glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
             glBindTexture(GL_TEXTURE_2D, textures[i].id);
         }
@@ -160,10 +174,12 @@ public:
 
         // 绘制网格
         glBindVertexArray(VAO);// 调用显存中的网格数据
+        // 我现在懂了，Bind就是设置opengl状态机，将当前的顶点状态设置为VAO
         glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(indices.size()), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
-
+        // 因此在结束时，要将顶点状态设置回去
         glActiveTexture(GL_TEXTURE0);
+        // 把纹理状态也设置回去
     }
 
     void Release()

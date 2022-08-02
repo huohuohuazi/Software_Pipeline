@@ -77,7 +77,7 @@ public:
         glDeleteShader(vertex);
         glDeleteShader(fragment);
 
-        std::cout << "Generate Shader SUCCUSS!\n" << std::endl;
+        std::cout << "Generate Shader SUCCUSS! Shader ID = " << ID << std::endl;
 
     }
 

@@ -20,6 +20,7 @@
 
 // 纹理可能不是一个模型独有的，不作为私有变量了
 vector<Texture> textures_loaded;// 已加载的纹理，在重复加载时可以直接取用
+Texture default_texture;
 
 // 读取纹理并加载到显存中，返回于显存中的ID
 unsigned int TextureFromFile(const char* path, const string& directory);
@@ -39,25 +40,40 @@ private:
 
         Assimp::Importer importer;
         // 调用Importer的方法
-        const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+        const aiScene* scene = importer.ReadFile(path, aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
         // aiProcess_Triangulate:所有的图元形状强制变换为三角形。aiProcess_FlipUVs：自动反转UV的y轴，和opengl对应
         // aiProcess_SplitLargeMeshes/aiProcess_OptimizeMeshes：分割/整合网格，适应最大网格数/减少drawcall的需求
 
         if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
         {
             // 检查数据，如果不完整，则标记到AI_SCENE_FLAGS_INCOMPLETE上
-            cout << "ERROR::ASSIMP::" << importer.GetErrorString() << endl;
+            std::cout << "ERROR::ASSIMP::" << importer.GetErrorString() << endl;
             return;
         }
         // 模型存放的文件目录
         directory = path.substr(0, path.find_last_of('/'));
         std::cout << "Read Model File Success： "<< directory << endl;
 
+        loadDefaultTexture();
 
         // 递归处理所有节点
         processNode(scene->mRootNode, scene);
+        
     }
 
+    // 默认材质，以后用的多
+    void loadDefaultTexture()
+    {
+        
+        string pa = "1001_albedo.jpg";
+        //string dir = pa.substr(0, pa.find_last_of('/'));
+        string dir = "resources/objects/survival-guitar-backpack/textures";
+        default_texture.id = TextureFromFile(pa.c_str(), dir);
+        default_texture.type = "texture_diffuse";
+        default_texture.path = "resources/objects/survival-guitar-backpack/textures/1001_albedo.jpg";
+
+        textures_loaded.push_back(default_texture);
+    }
 
     // 处理模型所有节点，将节点的assimp的aiMesh格式处理成为openGL的Mesh格式，并写入vector
     void processNode(aiNode* node, const aiScene* scene)
@@ -85,10 +101,12 @@ private:
         vector<unsigned int> indices;// 索引集合
         vector<Texture> textures;// 材质集合
 
+
+
         // 遍历aiMesh的顶点，处理顶点位置、法线和纹理坐标uv
         //std::cout << "aimesh->mNumVertices = " << aimesh->mNumVertices << endl;
         //std::cout << " x= " << aimesh->mVertices[0].x << " y= " << aimesh->mVertices[0].y << " z= " << aimesh->mVertices[0].z << endl;
-
+        std::cout << "Process Vertices:" << endl;
         for (unsigned int i = 0; i < aimesh->mNumVertices; i++)
         {
             // Mesh的顶点类
@@ -122,23 +140,26 @@ private:
                 vertex.TexCoords = vec;
 
                 // tangent
-                //vector.x = aimesh->mTangents[i].x;
-                //vector.y = aimesh->mTangents[i].y;
-                //vector.z = aimesh->mTangents[i].z;
-                //vertex.Tangent = vector;
+                vector.x = aimesh->mTangents[i].x;
+                vector.y = aimesh->mTangents[i].y;
+                vector.z = aimesh->mTangents[i].z;
+                vertex.Tangent = vector;
                 // bitangent
-                //vector.x = aimesh->mBitangents[i].x;
-                //vector.y = aimesh->mBitangents[i].y;
-                //vector.z = aimesh->mBitangents[i].z;
-                //vertex.Bitangent = vector;
+                vector.x = aimesh->mBitangents[i].x;
+                vector.y = aimesh->mBitangents[i].y;
+                vector.z = aimesh->mBitangents[i].z;
+                vertex.Bitangent = vector;
 
             }
             else
                 vertex.TexCoords = glm::vec2(0.0f, 0.0f);
-
+                
             vertices.push_back(vertex);
         }
 
+
+        
+        std::cout << "Process indices:" << endl;
         // 处理索引(面与顶点关系)
         // std::cout << "aimesh->mNumFaces = " << aimesh->mNumFaces << endl;
         for (unsigned int i = 0; i < aimesh->mNumFaces; i++)
@@ -148,13 +169,17 @@ private:
                 indices.push_back(face.mIndices[j]);
         }
 
+
+
+        // cout << *aimesh->mNumUVComponents << endl;
         // 处理材质
-        // std::cout << "aimesh->mMaterialIndex = " << aimesh->mMaterialIndex << endl;
+        std::cout << "Process materials:" << aimesh->mMaterialIndex << endl;
         if (aimesh->mMaterialIndex >= 0)
         {
+            // cout<<"Processing Material" << endl;
             // assimp的material
             aiMaterial* aimaterial = scene->mMaterials[aimesh->mMaterialIndex];
-
+            
             // 纹理贴图
             vector<Texture> diffuseMaps = loadMaterialTextures(aimaterial,
                 aiTextureType_DIFFUSE, "texture_diffuse");
@@ -174,50 +199,82 @@ private:
             std::vector<Texture> heightMaps = loadMaterialTextures(aimaterial, 
                 aiTextureType_AMBIENT, "texture_height");
             textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
+   
+        }
+        /*
+        
+        else
+        {
+            Texture texture;
 
+            // id是纹理于显存中的ID
+            texture.id = TextureFromFile("resources/textures/container2.png", directory);
+            texture.type = "texture_diffuse";
+            texture.path = "";
+            textures.push_back(texture);
+            //textures_loaded.push_back(texture); // 添加到已加载的纹理中
 
-            
+        }
+        */
+
+        // 默认材质
+        if (textures.size() == 0)
+        {
+            cout << "Use Defualt Texture..." << endl;
+            textures.push_back(default_texture);
         }
 
-        return Mesh(vertices, indices, textures);
+
+        //cout <<"MeshTextureSize = "<< textures.size() << endl;
+        cout << "Size of vertices=" << vertices.size() << " Size of indices=" << indices.size() << " Size of textures=" << textures.size() << endl;
+        return Mesh(vertices, indices,textures);
     }
     
 
-    // 将assimp的材质转化为mesh格式
+    // 将assimp的材质转化为mesh格式。一次操作同种类型的材质贴图
     vector<Texture> loadMaterialTextures(aiMaterial* aimat, aiTextureType type, string typeName)
     {
         vector<Texture> textures;
-
-        /*
+  
+        /* 
         // 遍历所有纹理
         for (unsigned int i = 0; i < aimat->GetTextureCount(type); i++)
         {
             aiString str;
             aimat->GetTexture(type, i, &str);
 
+            cout << "String:" << str.C_Str() << endl;
+
             // 保存纹理信息
             Texture texture;
             texture.id = TextureFromFile(str.C_Str(), directory);
             texture.type = typeName;
-            texture.path = str.C_Str();
+            texture.path = str;
             textures.push_back(texture);
         }
-        return textures;
-        */
-
+       // return textures;
+         */   
+        
+        // std::cout << "Nunber of Property:: " << aimat->mNumProperties << endl;
+        // cout << aimat->mProperties[0]->mKey.C_Str() << aimat->mProperties[1]->mKey.C_Str() << endl;
+        //std::cout << "Type : " << type <<" Num:" << aimat->GetTextureCount(type) << endl;
         // 这里做一个优化，开辟一个数组用于保存已经加载过的纹理，可以直接从内存/显存中取，而不用IO读取
+        
+        cout << "Type: " << type << " = " << aimat->GetTextureCount(type);
         for (unsigned int i = 0; i < aimat->GetTextureCount(type); i++)
         {
+
             aiString str;
             aimat->GetTexture(type, i, &str);
             bool skip = false;
-
+            std::cout << "String:" << str.C_Str() << endl;
             // 每次加载时遍历一下已加载的纹理名称，如有重复则跳过
             for (unsigned int j = 0; j < textures_loaded.size(); j++)
             {
                 // string_compare
                 if (std::strcmp(textures_loaded[j].path.data, str.C_Str()) == 0)
                 {
+                    std::cout << "SKIP" << endl;
                     // 对于重复的，则直接从数组中读取
                     textures.push_back(textures_loaded[j]);
                     skip = true;
@@ -226,6 +283,7 @@ private:
             }
             if (!skip)
             {   
+                cout << "No SKIP" << endl;
                 // 如果纹理还没有被加载，则加载它
                 Texture texture;
 
@@ -237,6 +295,7 @@ private:
                 textures_loaded.push_back(texture); // 添加到已加载的纹理中
             }
         }
+        
         return textures;
 
     }
@@ -253,6 +312,7 @@ public:
     void Draw(Shader shader)
     {
         // meshes是vector数组，遍历渲染即可
+        // cout << "Number of Meshes:" << meshes.size() << endl;
         for (unsigned int i = 0; i < meshes.size(); i++)
             meshes[i].Draw(shader);
     }
@@ -299,16 +359,15 @@ unsigned int TextureFromFile(const char* path, const string& directory)
 
         stbi_image_free(data);
 
-        std::cout << "Texture LOAD Success:  " << path <<" , ID = " << textureID << std::endl;
+        std::cout << "Texture LOAD Success:  " << filename <<" , ID = " << textureID << std::endl;
     }
     else
     {
-        std::cout << "Texture LOAD Failed:  " << path << std::endl;
+        std::cout << "Texture LOAD Failed:  " << filename << std::endl;
         stbi_image_free(data);
     }
 
     return textureID;
 }
-
 
 #endif

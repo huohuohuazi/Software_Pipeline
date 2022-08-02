@@ -109,8 +109,8 @@ int main(int argc, char* argv[])
 
         // 加载shader
         //Shader cubeShader("Shaders/Blinn_Phong.vert", "Shaders/Blinn_Phong.frag");
-        Shader cubeShader("Shaders/simpleTexture.vert", "Shaders/simpleTexture.frag");
-        Shader lightShader("Shaders/simpleLight.vert", "Shaders/simpleLight.frag");
+        // Shader cubeShader("Shaders/simpleTexture.vert", "Shaders/simpleTexture.frag");
+        // Shader lightShader("Shaders/simpleLight.vert", "Shaders/simpleLight.frag");
         Shader modelShader("Shaders/simpleModel.vert", "Shaders/simpleModel.frag");
 
     #pragma endregion
@@ -165,8 +165,10 @@ int main(int argc, char* argv[])
         };
 
 
-        //Model nanosuitModel("resources/objects/nanosuit/nanosuit.obj");
-         Model nanosuitModel("resources/objects/chair/exp.obj");
+        //Model nanosuitModel("resources/objects/nanosuit/nanosuit.fbx");
+         Model nanosuitModel("resources/objects/survival-guitar-backpack/source/Survival_BackPack_2.fbx");
+         //Model nanosuitModel("resources/objects/simple_table.obj");
+         
 
         // positions all containers
         glm::vec3 cubePositions[] = {
@@ -189,11 +191,12 @@ int main(int argc, char* argv[])
             glm::vec3(0.0f,  0.0f, -3.0f)
         };
 
-        unsigned int diffuseMap = LoadTexture("resources/textures/container2.png");
-        unsigned int specularMap = LoadTexture("resources/textures/container2_specular.png");
+        // unsigned int diffuseMap = LoadTexture("resources/textures/container2.png");
+        // int specularMap = LoadTexture("resources/textures/container2_specular.png");
     
     #pragma endregion
 
+        /* 
         unsigned int VBO, cubeVAO;
         glGenVertexArrays(1, &cubeVAO);
         glGenBuffers(1, &VBO);
@@ -212,7 +215,7 @@ int main(int argc, char* argv[])
         cubeShader.use();
         cubeShader.setInt("material.diffuse", 0);
         cubeShader.setInt("material.specular", 1);
-
+        */
     #pragma region 绘制循环
 
         std::cout << "BeginToLoop:" << endl;
@@ -232,16 +235,18 @@ int main(int argc, char* argv[])
             glClearColor(0.1f, 0.2f, 0.2f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+            
             // 传入shader数据
-            cubeShader.use();
-        
-            cubeShader.setVec3("viewPos", camera.Position);
-            cubeShader.setFloat("material.shininess", 32.0f);
+            // cubeShader.use();
 
             // MVP矩阵，M是transform变换
             glm::mat4 model = glm::mat4(1.0f);
             glm::mat4 view = camera.GetView();
             glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)1280 / (float)720, 0.1f, 100.0f);
+
+            /*
+            cubeShader.setVec3("viewPos", camera.Position);
+            cubeShader.setFloat("material.shininess", 32.0f);
 
             cubeShader.setMat4("model", model);
             cubeShader.setMat4("view", view);
@@ -317,7 +322,7 @@ int main(int argc, char* argv[])
                 glDrawArrays(GL_TRIANGLES, 0, 36);
             }
 
-
+            */
 
 
             // 使用shader绘制模型
