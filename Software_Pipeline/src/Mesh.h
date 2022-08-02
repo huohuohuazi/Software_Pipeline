@@ -23,10 +23,10 @@ struct Vertex {
 
     glm::vec3 Tangent;
     // bitangent
-    glm::vec3 Bitangent;
+     glm::vec3 Bitangent;
 
-    int m_BoneIDs[MAX_BONE_INFLUENCE];// 影响顶点的骨骼ID
-    float m_Weights[MAX_BONE_INFLUENCE];// 骨骼权重
+    //int m_BoneIDs[MAX_BONE_INFLUENCE];// 影响顶点的骨骼ID
+    //float m_Weights[MAX_BONE_INFLUENCE];// 骨骼权重
 };
 
 struct Texture {
@@ -48,68 +48,84 @@ private:
         glGenBuffers(1, &VBO);
         glGenBuffers(1, &EBO);
      
-
-        /*--------------------------------------------------------------------------------------------*/
         
+    #pragma region VBO 
+
+        glBindVertexArray(VAO);
         // cout << "Sizeof Vertex:" << sizeof(Vertex) << endl;
         // VBO是数据的集合，包括了顶点、索引、uv坐标等信息，整合发送给GPU显存
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
         // 因为是static类型，因此只写入一次
+        // &vertices[0]是首地址，毕竟是vertor类型
+
+    #pragma endregion
+
         
-        /*--------------------------------------------------------------------------------------------*/
-       
+    #pragma region EBO
+
         // EBO为顶点索引
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),&indices[0], GL_STATIC_DRAW);
-        
-        /*--------------------------------------------------------------------------------------------*/
-        
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    #pragma endregion
+
+      
+    #pragma region VAO
+
         // VAO描述了如何将整合的信息分配给顶点着色器的各个属性
+        // 此时，状态机为：设置VAO
         glBindVertexArray(VAO);
 
         // 顶点位置
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-        /*   对于index = i(0, 1, 2...属性的索引), 属性长度 = alloc[i](vec2 / vec3)
+        /*   
+             对于index = i(0, 1, 2...属性的索引), 属性长度 = alloc[i](vec2 / vec3)
              type=float,是否标准化
              步长=maxLength*sizeof(float)，一个顶点所包含数据所占的byte大小
-             该属性在步长里的偏移量为sum*sizeof(float)   */ 
+             该属性在步长里的偏移量为sum*sizeof(float)   
+        */
 
         // 顶点法线
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
-        
+
         // 顶点纹理坐标
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
-        
+
         /*--------------------------------------------------------------------------------------------*/
 
         glEnableVertexAttribArray(3);
         glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
-        
+
         /*--------------------------------------------------------------------------------------------*/
 
         // vertex bitangent
         glEnableVertexAttribArray(4);
         glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
-        
+
         /*--------------------------------------------------------------------------------------------*/
 
-        
+
         // 影响的骨骼
-        glEnableVertexAttribArray(5);
-        glVertexAttribIPointer(5, 4, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, m_BoneIDs));
+        // glEnableVertexAttribArray(5);
+        //glVertexAttribIPointer(5, 4, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, m_BoneIDs));
 
         // 权重
-        glEnableVertexAttribArray(6);
-        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, m_Weights));
+        //glEnableVertexAttribArray(6);
+        //glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, m_Weights));
 
         /*--------------------------------------------------------------------------------------------*/
 
+    #pragma endregion
 
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
+
     }
 
 
@@ -129,14 +145,7 @@ public:
         setupMesh();
     }
 
-    Mesh(vector<Vertex> vertices, vector<unsigned int> indices)
-    {
-        this->vertices = vertices;
-        this->indices = indices;
-        //this->textures = textures;
-
-        setupMesh();
-    }
+    
     
     void Draw(Shader shader)
     {
@@ -147,13 +156,15 @@ public:
 
 
         // 对于该mesh的所有纹理
-        //std::cout << "textures.size=" << textures.size() << endl;
+        // std::cout << "textures.size=" << textures.size() << endl;
         for (unsigned int i = 0; i < textures.size(); i++)
         {
             glActiveTexture(GL_TEXTURE0 + i); // 激活相应的纹理单元
 
             string number;// 获取纹理在该纹理种类(diffuse/specular/normal)中的编号
             string name = textures[i].type;
+
+            // cout<< name
 
             if (name == "texture_diffuse")
                 number = std::to_string(diffuseNr++);
@@ -168,18 +179,25 @@ public:
             // std::cout << "MaterialName : " << (name + number).c_str() <<endl;
 
             glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
+            //glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, textures[i].id);
         }
 
 
         // 绘制网格
-        glBindVertexArray(VAO);// 调用显存中的网格数据
-        // 我现在懂了，Bind就是设置opengl状态机，将当前的顶点状态设置为VAO
-        glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(indices.size()), GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
-        // 因此在结束时，要将顶点状态设置回去
+        
+         glBindVertexArray(VAO);
+        //Bind大概就是设置opengl状态机，将当前的顶点数组设置为VAO
+         //glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+       
+        //DrawElements有问题，一直画不出来
+        glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, &indices[0]);
+        
+
+        // 在结束时，要将纹理状态和VAO状态设置回去
         glActiveTexture(GL_TEXTURE0);
-        // 把纹理状态也设置回去
+        glBindVertexArray(0);
+
     }
 
     void Release()

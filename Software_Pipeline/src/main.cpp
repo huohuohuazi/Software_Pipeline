@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
 
         // 加载shader
         //Shader cubeShader("Shaders/Blinn_Phong.vert", "Shaders/Blinn_Phong.frag");
-        // Shader cubeShader("Shaders/simpleTexture.vert", "Shaders/simpleTexture.frag");
+         // Shader cubeShader("Shaders/simpleTexture.vert", "Shaders/simpleTexture.frag");
         // Shader lightShader("Shaders/simpleLight.vert", "Shaders/simpleLight.frag");
         Shader modelShader("Shaders/simpleModel.vert", "Shaders/simpleModel.frag");
 
@@ -165,9 +165,9 @@ int main(int argc, char* argv[])
         };
 
 
-        //Model nanosuitModel("resources/objects/nanosuit/nanosuit.fbx");
-         Model nanosuitModel("resources/objects/survival-guitar-backpack/source/Survival_BackPack_2.fbx");
-         //Model nanosuitModel("resources/objects/simple_table.obj");
+        // Model nanosuitModel("resources/objects/nanosuit/nanosuit.fbx");
+         //Model nanosuitModel("resources/objects/survival-guitar-backpack/source/Survival_BackPack_2.fbx");
+         Model nanosuitModel("resources/objects/simple_table.obj");
          
 
         // positions all containers
@@ -191,8 +191,8 @@ int main(int argc, char* argv[])
             glm::vec3(0.0f,  0.0f, -3.0f)
         };
 
-        // unsigned int diffuseMap = LoadTexture("resources/textures/container2.png");
-        // int specularMap = LoadTexture("resources/textures/container2_specular.png");
+         // unsigned int diffuseMap = LoadTexture("resources/textures/container2.png");
+         // unsigned int specularMap = LoadTexture("resources/textures/container2_specular.png");
     
     #pragma endregion
 
@@ -216,6 +216,7 @@ int main(int argc, char* argv[])
         cubeShader.setInt("material.diffuse", 0);
         cubeShader.setInt("material.specular", 1);
         */
+
     #pragma region 绘制循环
 
         std::cout << "BeginToLoop:" << endl;
@@ -236,15 +237,22 @@ int main(int argc, char* argv[])
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             
+            
             // 传入shader数据
-            // cubeShader.use();
+             
 
             // MVP矩阵，M是transform变换
             glm::mat4 model = glm::mat4(1.0f);
             glm::mat4 view = camera.GetView();
             glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)1280 / (float)720, 0.1f, 100.0f);
 
+            // glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+
             /*
+            cubeShader.use();
+            
             cubeShader.setVec3("viewPos", camera.Position);
             cubeShader.setFloat("material.shininess", 32.0f);
 
@@ -327,6 +335,7 @@ int main(int argc, char* argv[])
 
             // 使用shader绘制模型
             modelShader.use();
+            model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
             modelShader.setMat4("model", model);
             modelShader.setMat4("view", view);
             modelShader.setMat4("projection", projection);
@@ -345,8 +354,6 @@ int main(int argc, char* argv[])
 
     // 释放资源
     //nanosuitModel.Release();
-
-
 
     glfwTerminate();
     std::cout << "Done" << endl;
@@ -470,11 +477,11 @@ unsigned int LoadTexture(char const* path)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
         stbi_image_free(data);
-        std::cout << "Load Texture SUCCESS! " << path << std::endl;
+        std::cout << "Load Texture SUCCESS! " << path << " ,ID=" << textureID << std::endl;
     }
     else
     {
-        std::cout << "Texture failed to load at path: " << path << std::endl;
+        std::cout << "Load Texture Failed! " << path << std::endl;
         stbi_image_free(data);
     }
     return textureID;
