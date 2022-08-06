@@ -15,8 +15,11 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <map>
 #include "Mesh.h"
+//#include "Texture.h"
 #include "stb_image.h"
+
 
 // 纹理可能不是一个模型独有的，不作为私有变量了
 vector<Texture> textures_loaded;// 已加载的纹理，在重复加载时可以直接取用
@@ -24,34 +27,38 @@ Texture default_texture;
 
 // 读取纹理并加载到显存中，返回于显存中的ID
 unsigned int TextureFromFile(const char* path, const string& directory);
-// 默认纹理
-void loadDefaultTexture();
+
+
+// 默认材质，以后用的多
+void loadDefaultTexture()
+{
+    //string pa = "1001_albedo.jpg";
+    string pa = "_WoodFine0058_11_M.jpg";
+
+
+    //string dir = pa.substr(0, pa.find_last_of('/'));
+    //string dir = "resources/objects/survival-guitar-backpack/textures";
+    string dir = "resources/objects/chair";
+    default_texture.id = TextureFromFile(pa.c_str(), dir);
+    default_texture.type = "texture_diffuse";
+    //default_texture.path = "resources/objects/survival-guitar-backpack/textures/1001_albedo.jpg";
+    default_texture.path = "resources/objects/chair/_WoodFine0058_11_M.jpg";
+
+
+    textures_loaded.push_back(default_texture);
+}
+
+
 
 class Model
 {
 private:
     vector<Mesh> meshes;// 一个模型有多个Mesh
     string directory;// 模型的目录，包括obj、mtl、材质贴图
+    map<string, Texture> loadedTextureMap;// 材质与名称映射关系
     
-    // 默认材质，以后用的多
-    void loadDefaultTexture()
-    {
-         //string pa = "1001_albedo.jpg";
-        string pa = "_WoodFine0058_11_M.jpg";
 
-
-        //string dir = pa.substr(0, pa.find_last_of('/'));
-        //string dir = "resources/objects/survival-guitar-backpack/textures";
-        string dir = "resources/objects/chair";
-        default_texture.id = TextureFromFile(pa.c_str(), dir);
-        default_texture.type = "texture_diffuse";
-        //default_texture.path = "resources/objects/survival-guitar-backpack/textures/1001_albedo.jpg";
-        default_texture.path = "resources/objects/chair/_WoodFine0058_11_M.jpg";
-        
-
-        textures_loaded.push_back(default_texture);
-    }
-
+    
     // 开始加载模型
     void loadModel(string path)
     {
@@ -70,7 +77,7 @@ private:
             return;
         }
         // 模型存放的文件目录
-        directory = path.substr(0, path.find_last_of('/'));
+        directory = path.substr(0, path.find_last_of('\\'));
         std::cout << "Read Model File Success： "<< directory << endl;
 
         loadDefaultTexture();
@@ -192,9 +199,24 @@ private:
         // std::cout << "Process materials:" << aimesh->mMaterialIndex << endl;
         if (aimesh->mMaterialIndex >= 0)
         {
+            aiMaterial* aimaterial = scene->mMaterials[aimesh->mMaterialIndex];
+
+            std::cout << "Material Name: " << aimaterial->GetName().C_Str() << endl;
+
+            vector<Texture> diffuseTexture;
+            processMaterial(aimaterial, scene, aiTextureType_DIFFUSE, diffuseTexture);
+            textures.insert(textures.end(), diffuseTexture.begin(), diffuseTexture.end());
+            
+            vector<Texture> specularTexture;
+            processMaterial(aimaterial, scene, aiTextureType_SPECULAR, specularTexture);
+            textures.insert(textures.end(), specularTexture.begin(), specularTexture.end());
+
+            /* 
             // cout<<"Processing Material" << endl;
             // assimp的material
-            aiMaterial* aimaterial = scene->mMaterials[aimesh->mMaterialIndex];
+            
+            
+
 
             // 纹理贴图
             vector<Texture> diffuseMaps = loadMaterialTextures(aimaterial,
@@ -215,14 +237,17 @@ private:
             std::vector<Texture> heightMaps = loadMaterialTextures(aimaterial,
                 aiTextureType_AMBIENT, "texture_height");
             textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
-
+            */
         }
         // 如果没有材质，则指定为默认材质                                                               
-        if (textures.size() == 0)
+        //if (textures.size() == 0)
+        else
         {
             cout << "Use Defualt Texture..." << endl;
             textures.push_back(default_texture);
         }
+        
+        cout << "Texture Number:" << textures.size() << endl;
 
     #pragma endregion
 
@@ -303,6 +328,54 @@ private:
 
     }
 
+    // 新方法？
+    bool processMaterial(const aiMaterial* matPtr, const aiScene* sceneObjPtr,const aiTextureType textureType, std::vector<Texture>& textures)
+    {
+        textures.clear();
+
+        if (!matPtr
+            || !sceneObjPtr)
+        {
+            return false;
+        }
+        if (matPtr->GetTextureCount(textureType) <= 0)
+        {
+            return false;
+        }
+        for (size_t i = 0; i < matPtr->GetTextureCount(textureType); ++i)
+        {
+            Texture text;
+            aiString textPath;
+            aiReturn retStatus = matPtr->GetTexture(textureType, i, &textPath);
+            if (retStatus != aiReturn_SUCCESS
+                || textPath.length == 0)
+            {
+                std::cerr << "Warning, load texture type=" << textureType
+                    << "index= " << i << " failed with return value= "
+                    << retStatus << std::endl;
+                continue;
+            }
+            std::string absolutePath = this->directory + "/" + textPath.C_Str();
+            map<string, Texture>::const_iterator it = this->loadedTextureMap.find(absolutePath);
+            if (it == this->loadedTextureMap.end()) // 检查是否已经加载过了
+            {
+                //GLuint textId = TextureHelper::load2DTexture(absolutePath.c_str());
+
+                text.id = TextureFromFile(absolutePath.c_str(), directory);
+                text.path = absolutePath;
+                text.type = textureType;
+                textures.push_back(text);
+                loadedTextureMap[absolutePath] = text;
+            }
+            else
+            {
+                textures.push_back(it->second);
+            }
+        }
+        return true;
+    }
+
+
 public:
     
     // 构造函数，加载模型
@@ -310,7 +383,10 @@ public:
     {
         loadModel(path);
     }
-
+    Model(char* path)
+    {
+        loadModel(path);
+    }
     // 使用shader绘制model（遍历绘制mesh）
     void Draw(Shader shader)
     {
@@ -345,7 +421,7 @@ unsigned int TextureFromFile(const char* path, const string& directory)
     unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
     if (data)
     {
-        GLenum format;
+        GLenum format = GL_RGB;
         if (nrComponents == 1)
             format = GL_RED;
         else if (nrComponents == 3)

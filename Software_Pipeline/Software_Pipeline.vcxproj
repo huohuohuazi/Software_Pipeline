@@ -95,7 +95,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
-      <AdditionalIncludeDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -113,7 +113,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
-      <AdditionalIncludeDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\DELL\Desktop\PBRT\Software_Pipeline\Software_Pipeline\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -182,6 +182,14 @@
   <ItemGroup>
     <None Include="Shaders\Blinn_Phong.frag" />
     <None Include="Shaders\Blinn_Phong.vert" />
+    <None Include="Shaders\DebugShader\AlphaTest.frag" />
+    <None Include="Shaders\DebugShader\AlphaTest.vert" />
+    <None Include="Shaders\DebugShader\DepthTest.frag" />
+    <None Include="Shaders\DebugShader\DepthTest.vert" />
+    <None Include="Shaders\DebugShader\BaseCube.frag" />
+    <None Include="Shaders\DebugShader\BaseCube.vert" />
+    <None Include="Shaders\DebugShader\StencilTest.frag" />
+    <None Include="Shaders\DebugShader\StencilTest.vert" />
     <None Include="Shaders\directionalLight.frag" />
     <None Include="Shaders\directionalLight.vert" />
     <None Include="Shaders\simpleColor.frag" />

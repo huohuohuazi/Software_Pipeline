@@ -181,6 +181,15 @@ public:
             glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
             //glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, textures[i].id);
+
+            // glUniform1i函数用于给shader指定显存中的数据，如主函数中用于给shader指定texture的代码setInt
+            /* 
+                void setInt(const std::string & name, int value) const
+                {
+                    glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
+                }
+            */
+            
         }
 
 
@@ -195,7 +204,7 @@ public:
         
 
         // 在结束时，要将纹理状态和VAO状态设置回去
-        glActiveTexture(GL_TEXTURE0);
+        // glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(0);
 
     }

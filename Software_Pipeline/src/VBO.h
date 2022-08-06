@@ -41,9 +41,9 @@ public:
 	}
 
 	// ÎªVBOÌî³äÊý¾Ý
-	void addStaticBuffer(unsigned int vbo, float *data={}, int size = 0)
+	void addStaticBuffer(float *data={}, int size = 0)
 	{
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, *_vbo);
 		if (data){
 			std::cout << "sizeofData=" << size << endl;
 			glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);

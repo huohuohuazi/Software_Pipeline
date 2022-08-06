@@ -8,7 +8,12 @@
 
     using namespace std;
 
-    #include <GL/glut.h>
+    
+    //#include <GL/glut.h>
+    #include <gl/glut.h>
+    #include <gl/GL.h>
+    //#include <GLEW/GL/glew.h>
+
     #include <GLFW/glfw3.h>
     #include <GLM/glm.hpp>
     #include <GLM/gtc/matrix_transform.hpp>
@@ -20,6 +25,7 @@
     #include "Model.h"
     #include "Camera.h"
     #include "VBO.h"
+    //#include "Texture.h"
     //#include "stb_image.h"
     //#include "src/Texture.h"
 
@@ -35,7 +41,8 @@
     void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
     void processInput(GLFWwindow* window);
     unsigned int LoadTexture(char const* path);
-
+    void DrawOutline(Shader ourlineShader, int step, float& scale, float targetScale = 1.1);
+    // void DrawOutline(Shader ourlineShader, int step, float& scale);
 #pragma endregion
 
 
@@ -51,9 +58,10 @@
 
     Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
+    #define GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX 0x9048
+    #define GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX 0x9049
+
 #pragma endregion
-
-
 
 
 
@@ -71,7 +79,7 @@ int main(int argc, char* argv[])
         }
    
         GLFWwindow* window;
-        window = glfwCreateWindow(1280, 720, "Hello World", NULL, NULL);
+        window = glfwCreateWindow(Width, Height, "Hello World", NULL, NULL);
 
 
         if (!window){
@@ -95,12 +103,64 @@ int main(int argc, char* argv[])
 
         DisplayDeviceInfo();
 
-        // 开启深度测试
-        glEnable(GL_DEPTH_TEST);
-    
-        // 图片导入反转y轴
-        stbi_set_flip_vertically_on_load(true);
 
+    #pragma region 深度缓冲
+
+        // 开启深度测试,大部分深度缓冲的精度都是24位的
+        glEnable(GL_DEPTH_TEST);// 若通过深度测试，则再深度缓冲区保存该片段/像素的深度
+        // 否则舍弃
+
+        glDepthFunc(GL_LESS);// 设置深度测试的方法
+        // GL_LESS	在片段深度值小于缓冲的深度值时通过测试
+        // GL_GREATER	在片段深度值大于缓冲区的深度值时通过测试
+        // 还有GL_ALWAYS / GL_NEVER / GL_EQUAL / GL_LEQUAL
+
+        // 禁用深度缓冲更新（设置掩码为false），用于不希望更新深度缓冲的情况
+       // glDepthMask(GL_FALSE);
+
+    #pragma endregion
+
+    #pragma region 模板缓冲       
+
+        // 模板缓冲
+        glEnable(GL_STENCIL_TEST);
+        glStencilFunc(GL_EQUAL, 1, 0xFF);
+        // 1为参考值，即比较的内容
+        // 0xFF为掩码，会在用参考值比较前进行与(AND)运算，默认为全1
+
+        // 规定缓冲行为
+        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        // glStencilOp(GLenum sfail, GLenum dpfail,  GLenum dppass);
+        // sfail：模板测试失败时;dpfail:模板测试通过但深度测试失败； dppass：都通过
+        // 包括：GL_KEEP 保持当前的模板值 / GL_ZERO 设为0 / GL_REPLACE 替换为ref /  GL_INCR 模板值加1等等
+
+
+    #pragma endregion
+
+    #pragma region Alpha测试
+
+        glEnable(GL_BLEND);
+
+        // 混合选项
+        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+
+    #pragma endregion
+
+
+    #pragma region 面剔除 CULL
+
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_FRONT);
+        //glCullFace(GL_BACK);
+        glFrontFace(GL_CW);
+
+    #pragma endregion
+
+
+        // 图片导入反转y轴
+        stbi_set_flip_vertically_on_load(false);
+        
 #pragma endregion
 
 
@@ -108,114 +168,163 @@ int main(int argc, char* argv[])
     #pragma region 指定Shader
 
         // 加载shader
-        //Shader cubeShader("Shaders/Blinn_Phong.vert", "Shaders/Blinn_Phong.frag");
-         // Shader cubeShader("Shaders/simpleTexture.vert", "Shaders/simpleTexture.frag");
+        //Shader cubeShader("Shaders/DebugShader/DepthTest.vert", "Shaders/DebugShader/DepthTest.frag");
+        Shader outlineShader("Shaders/DebugShader/StencilTest.vert", "Shaders/DebugShader/StencilTest.frag");
+        Shader cubeShader("Shaders/DebugShader/BaseCube.vert", "Shaders/DebugShader/BaseCube.frag");
+        Shader AlphaShader("Shaders/DebugShader/AlphaTest.vert", "Shaders/DebugShader/AlphaTest.frag");
+
+        //Shader cubeShader("Shaders/simpleTexture.vert", "Shaders/simpleTexture.frag");
         // Shader lightShader("Shaders/simpleLight.vert", "Shaders/simpleLight.frag");
-        Shader modelShader("Shaders/simpleModel.vert", "Shaders/simpleModel.frag");
+        // Shader modelShader("Shaders/simpleModel.vert", "Shaders/simpleModel.frag");
 
     #pragma endregion
 
 
 
     #pragma region 模型信息
+        
+           // （一个）方块
+           // 更新为按照顺时针方向定义的
+           float cubeVertices[] = {
+               // Back face
+               -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // Bottom-left
+                0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
+                0.5f, -0.5f, -0.5f,  1.0f, 0.0f, // bottom-right         
+                0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
+               -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
+               -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+               // Front face
+               -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+                0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+                0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
+                0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
+               -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, // top-left
+               -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+               // Left face
+               -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
+               -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-left
+               -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
+               -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
+               -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
+               -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
+               // Right face
+                0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
+                0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
+                0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right         
+                0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
+                0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
+                0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left     
+               // Bottom face
+               -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
+                0.5f, -0.5f, -0.5f,  1.0f, 1.0f, // top-left
+                0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
+                0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
+               -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
+               -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
+               // Top face
+               -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+                0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+                0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right     
+                0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+               -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+               -0.5f,  0.5f,  0.5f,  0.0f, 0.0f  // bottom-left        
+           };
 
-        float vertices[] = {
-            // positions          // normals           // texture coords
-            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
-             0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
-             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
+           // 地板
+           float planeVertices[] = {
+               // positions          // texture Coords (note we set these higher than 1 (together with GL_REPEAT as texture wrapping mode). this will cause the floor texture to repeat)
+                5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
+               -5.0f, -0.5f,  5.0f,  0.0f, 0.0f,
+               -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
 
-            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-             0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
+                5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
+               -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
+                5.0f, -0.5f, -5.0f,  2.0f, 2.0f
+           };
+           
+           // （一个）草
+           float transparentVertices[] = {
+               // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+               0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+               0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+               1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
 
-            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-            -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-            -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+               0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+               1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+               1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+           };
 
-             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-             0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-             0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+           vector<glm::vec3> vegetation;
+           vegetation.push_back(glm::vec3(-1.5f, 0.0f, -0.48f));
+           vegetation.push_back(glm::vec3(1.5f, 0.0f, 0.51f));
+           vegetation.push_back(glm::vec3(0.0f, 0.0f, 0.7f));
+           vegetation.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
+           vegetation.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
 
-            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
-             0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
-
-            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-             0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
-        };
-
-
-        // Model nanosuitModel("resources/objects/nanosuit/nanosuit.fbx");
+        //C:/Users/DELL/Desktop/PBRT/Software_Pipeline/Software_Pipeline/
+        //Model nanosuitModel("resources/objects/nanosuit/nanosuit.fbx");
+        //Model nanosuitModel("resources/objects/nanosuit/nanosuit.fbx");
+        
+        //Model nanosuitModel(exePath.substr(0, exePath.find_last_of('\\')) + "\\resources\\objects\\nanosuit\\nanosuit.obj");
          //Model nanosuitModel("resources/objects/survival-guitar-backpack/source/Survival_BackPack_2.fbx");
-         Model nanosuitModel("resources/objects/simple_table.obj");
+         //Model nanosuitModel("resources/objects/simple_table.obj");
          
-
-        // positions all containers
-        glm::vec3 cubePositions[] = {
-       glm::vec3(0.0f,  0.0f,  0.0f),
-       glm::vec3(2.0f,  5.0f, -15.0f),
-       glm::vec3(-1.5f, -2.2f, -2.5f),
-       glm::vec3(-3.8f, -2.0f, -12.3f),
-       glm::vec3(2.4f, -0.4f, -3.5f),
-       glm::vec3(-1.7f,  3.0f, -7.5f),
-       glm::vec3(1.3f, -2.0f, -2.5f),
-       glm::vec3(1.5f,  2.0f, -2.5f),
-       glm::vec3(1.5f,  0.2f, -1.5f),
-       glm::vec3(-1.3f,  1.0f, -1.5f)
-        };
-        // positions of the point lights
-        glm::vec3 pointLightPositions[] = {
-            glm::vec3(0.7f,  0.2f,  2.0f),
-            glm::vec3(2.3f, -3.3f, -4.0f),
-            glm::vec3(-4.0f,  2.0f, -12.0f),
-            glm::vec3(0.0f,  0.0f, -3.0f)
-        };
-
-         // unsigned int diffuseMap = LoadTexture("resources/textures/container2.png");
-         // unsigned int specularMap = LoadTexture("resources/textures/container2_specular.png");
     
     #pragma endregion
 
-        /* 
-        unsigned int VBO, cubeVAO;
-        glGenVertexArrays(1, &cubeVAO);
-        glGenBuffers(1, &VBO);
 
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-        glBindVertexArray(cubeVAO);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-        glEnableVertexAttribArray(2);
+    #pragma region VBO
 
-        cubeShader.use();
-        cubeShader.setInt("material.diffuse", 0);
-        cubeShader.setInt("material.specular", 1);
-        */
+        // FrameBuffer Object
+        unsigned int FBO;
+        glGenFramebuffers(1, &FBO);
+
+         unsigned int cubeVBO, cubeVAO;
+         unsigned int planeVBO, planeVAO;
+         unsigned int grassVBO, grassVAO;
+
+         VBOmanager cube(&cubeVBO);
+         cube.addStaticBuffer(cubeVertices, sizeof(cubeVertices));
+         cube.addVAO(&cubeVAO);
+         cube.BindVAO(cubeVAO);
+         cube.addVertex(5, std::vector<int>{3, 2});
+
+         VBOmanager floor(&planeVBO);
+         floor.addStaticBuffer(planeVertices, sizeof(planeVertices));
+         floor.addVAO(&planeVAO);
+         floor.BindVAO(planeVAO);
+         floor.addVertex(5, std::vector<int>{3, 2});
+
+         VBOmanager grass(&grassVBO);
+         grass.addStaticBuffer(transparentVertices, sizeof(planeVertices));
+         grass.addVAO(&grassVAO);
+         grass.BindVAO(grassVAO);
+         grass.addVertex(5, std::vector<int>{3, 2});
+
+         // unsigned int diffuseMap = LoadTexture("resources/textures/container2.png");
+         // unsigned int specularMap = LoadTexture("resources/textures/container2_specular.png");
+
+    #pragma endregion
+
+
+    #pragma region Shaders Params
+
+         unsigned int cubeTexture = LoadTexture("resources/textures/cube.jpg");
+         unsigned int floorTexture = LoadTexture("resources/textures/floor.jpg");
+         //unsigned int grassTexture = LoadTexture("resources/textures/grass.png");
+         unsigned int windowTexture = LoadTexture("resources/textures/window.png");
+
+         cubeShader.use();
+         // cubeShader.setInt("material.diffuse", 0);
+         // cubeShader.setInt("material.specular", 1);
+         cubeShader.setInt("texture1", 0);
+         AlphaShader.use();
+         AlphaShader.setInt("texture1", 0);
+
+    #pragma endregion
+
+        
 
     #pragma region 绘制循环
 
@@ -223,48 +332,133 @@ int main(int argc, char* argv[])
 
         while (!glfwWindowShouldClose(window))
         {
+
+        #pragma region 准备工作
+
             // 先计算deltatime
             float currentFrame = glfwGetTime();
             deltaTime = currentFrame - lastFrame;
             lastFrame = currentFrame;
-
+            cout << "\rFPS: " << 1 / deltaTime << std::flush;
             // 输入
             processInput(window);
 
             // 渲染
-            // 清除颜色缓冲与深度缓冲
-            glClearColor(0.1f, 0.2f, 0.2f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            // 清除 颜色缓冲 与 深度缓冲 与 模板缓冲
+            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-            
-            
-            // 传入shader数据
-             
+        #pragma endregion
+
+
+        #pragma region VP矩阵
 
             // MVP矩阵，M是transform变换
             glm::mat4 model = glm::mat4(1.0f);
             glm::mat4 view = camera.GetView();
             glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)1280 / (float)720, 0.1f, 100.0f);
 
-            // glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+            outlineShader.use();
+            outlineShader.setMat4("view", view);
+            outlineShader.setMat4("projection", projection);
 
-            /*
             cubeShader.use();
-            
-            cubeShader.setVec3("viewPos", camera.Position);
-            cubeShader.setFloat("material.shininess", 32.0f);
-
-            cubeShader.setMat4("model", model);
             cubeShader.setMat4("view", view);
             cubeShader.setMat4("projection", projection);
 
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, diffuseMap);
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, specularMap);
+            AlphaShader.use();
+            AlphaShader.setMat4("view", view);
+            AlphaShader.setMat4("projection", projection);
 
+        #pragma endregion
+
+
+        #pragma region Use Bind Set And Draw
+
+            float scale = 1.1f;
+
+            // STEP : 0 : 画别的
+            DrawOutline(outlineShader, 0, scale);
+            // floor
+            glBindVertexArray(planeVAO);
+            glBindTexture(GL_TEXTURE_2D, floorTexture);
+            cubeShader.setMat4("model", glm::mat4(1.0f));
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glBindVertexArray(0);
+
+
+            // STEP : 1  :  pass1，绘制本体
+            DrawOutline(outlineShader, 1, scale);
+            // cubes
+            glBindVertexArray(cubeVAO);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cubeTexture);
+            // cube1
+            model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+            cubeShader.setMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            // cube2
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+            cubeShader.setMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+            // STEP : 2  :  pass2，扩张描边
+            DrawOutline(outlineShader, 2, scale, 1.1);
+            // cubes
+            glBindVertexArray(cubeVAO);
+            glBindTexture(GL_TEXTURE_2D, cubeTexture);
+            // cube1
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+            model = glm::scale(model, glm::vec3(scale, scale, scale));
+            outlineShader.setMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            // cube2
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+            model = glm::scale(model, glm::vec3(scale, scale, scale));
+            outlineShader.setMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+            // STEP : 3  :  恢复状态，绘制透明物体
+            DrawOutline(outlineShader, 3, scale);
+            glActiveTexture(GL_TEXTURE0);
+
+
+            // windows
+            // 透明物体之前会通过深度测试，因此alpha为0的部分仍然会挡住后面的半透明物体
+            glBindVertexArray(grassVAO);
+            AlphaShader.use();
+            glBindTexture(GL_TEXTURE_2D, windowTexture);
+
+            std::map<float, glm::vec3> sortedAlpha;
+            for (unsigned int i = 0; i < vegetation.size(); i++)
+            {
+                float dis = glm::length(camera.Position - vegetation[i]);
+                sortedAlpha[dis] = vegetation[i];
+                // dis是键，用来索引vegetation[i]
+                // 通过map的迭代器，可以顺序访问透明物体
+            }
+            
+            // 反向迭代器
+            for (std::map<float, glm::vec3>::reverse_iterator iter= sortedAlpha.rbegin();iter!=sortedAlpha.rend();iter++)
+            {
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, iter->second);
+                // second便是第二个元素
+                AlphaShader.setMat4("model", model);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+            }
+            glBindVertexArray(0);
+
+        #pragma endregion
+
+
+
+            /* 
 #pragma region Lighting
             cubeShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
             cubeShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
@@ -315,37 +509,25 @@ int main(int argc, char* argv[])
             cubeShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
 
 #pragma endregion
-
-
-            glBindVertexArray(cubeVAO);
-            for (unsigned int i = 0; i < 10; i++)
-            {
-                // calculate the model matrix for each object and pass it to shader before drawing
-                glm::mat4 model = glm::mat4(1.0f);
-                model = glm::translate(model, cubePositions[i]);
-                float angle = 20.0f * i;
-                model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-                cubeShader.setMat4("model", model);
-
-                glDrawArrays(GL_TRIANGLES, 0, 36);
-            }
-
             */
+            
 
 
+            /* 
             // 使用shader绘制模型
             modelShader.use();
-            model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
+            model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
             modelShader.setMat4("model", model);
             modelShader.setMat4("view", view);
             modelShader.setMat4("projection", projection);
             nanosuitModel.Draw(modelShader);
+            */
 
-
-
+            
             // 交换缓冲并查询IO事件
             glfwSwapBuffers(window);
             glfwPollEvents();
+
         };
 
     #pragma endregion
@@ -354,7 +536,18 @@ int main(int argc, char* argv[])
 
     // 释放资源
     //nanosuitModel.Release();
+    #pragma region Release
 
+        glDeleteVertexArrays(1, &cubeVAO);
+        glDeleteVertexArrays(1, &planeVAO);
+        glDeleteBuffers(1, &cubeVBO);
+        glDeleteBuffers(1, &planeVBO);
+        glDeleteBuffers(1, &grassVAO);
+        glDeleteBuffers(1, &grassVBO);
+
+    #pragma endregion
+
+  
     glfwTerminate();
     std::cout << "Done" << endl;
     return 0;
@@ -367,9 +560,21 @@ void DisplayCurrentState()
 {
     if (pressTime==0)
     {
-        camera.PrintState();
+        //camera.PrintState();
+        GLint MemoryKb = 0;
+        glGetIntegerv(GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX, &MemoryKb);
+
+        GLint curmemory = 0;
+        glGetIntegerv(GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX, &curmemory);
+
+
+        cout << "总显存：" << MemoryKb / 1024 << "Mb" << " ，可用显存：" << curmemory / 1024 << endl;
+
         pressTime++;
     }
+    
+
+
 }
 
 // 打印设备信息
@@ -455,11 +660,12 @@ unsigned int LoadTexture(char const* path)
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
+
     unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
 
     if (data)
     {
-        GLenum format;
+        GLenum format = GL_RGB;
         if (nrComponents == 1)// 灰度图
             format = GL_RED;
         else if (nrComponents == 3)// RGB图
@@ -468,13 +674,15 @@ unsigned int LoadTexture(char const* path)
             format = GL_RGBA;
 
         glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);        glGenerateMipmap(GL_TEXTURE_2D);// 生成mipmap
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        // 纹理Repeat的bug，当为透明材质时，边缘处理仍然为进行插值，导致有半透明框，因此要改变repeart策略
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat 
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
 
         stbi_image_free(data);
         std::cout << "Load Texture SUCCESS! " << path << " ,ID=" << textureID << std::endl;
@@ -486,3 +694,49 @@ unsigned int LoadTexture(char const* path)
     }
     return textureID;
 }
+
+// 描边
+void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
+{
+    // 原理
+    /*
+    在绘制（需要添加轮廓的）物体之前，将模板函数设置为GL_ALWAYS，每当物体的片段被渲染时，将模板缓冲更新为1。
+    渲染物体。
+    禁用模板写入以及深度测试。
+    将每个物体缩放一点点。
+    使用一个不同的片段着色器，输出一个单独的（边框）颜色。
+    再次绘制物体，但只在它们片段的模板值不等于1时才绘制。
+    再次启用模板写入和深度测试。
+    */
+
+    // 先绘制其他物体，确保绘制地板的时候不会更新模板缓冲
+    if (step == 0){
+        glStencilMask(0x00); // 记得保证我们在绘制地板的时候不会更新模板缓冲
+    }
+
+    // pass 1
+    if (step == 1){
+        // 第一次渲染时，设置模板测试为GL_ALWAYS，都通过
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF);
+        // 此时被绘制的地方的模板值都更新为1
+    }
+    // pass2
+    if (step == 2)
+    {
+        // 禁用模板写入与深度测试
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);// 只有掩码值不为1的部分通过测试，即只绘制在之前绘制的箱子之外的部分
+        glStencilMask(0x00); // 掩码全部不通过
+        glDisable(GL_DEPTH_TEST);
+        ourlineShader.use();
+        scale = targetScale;
+    }
+    // 恢复模板启用与深度测试
+    if (step == 3){
+        glStencilFunc(GL_ALWAYS, 0, 0xFF);
+        glStencilMask(0xFF);
+        glEnable(GL_DEPTH_TEST);
+    }
+}
+
+    
