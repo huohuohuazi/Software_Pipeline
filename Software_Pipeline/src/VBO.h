@@ -45,7 +45,7 @@ public:
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, *_vbo);
 		if (data){
-			std::cout << "sizeofData=" << size << endl;
+			// std::cout << "sizeofData=" << size << endl;
 			glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
 		}	
 

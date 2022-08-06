@@ -122,6 +122,7 @@ int main(int argc, char* argv[])
 
     #pragma endregion
 
+
     #pragma region 模板缓冲       
 
         // 模板缓冲
@@ -139,6 +140,7 @@ int main(int argc, char* argv[])
 
     #pragma endregion
 
+
     #pragma region Alpha测试
 
         glEnable(GL_BLEND);
@@ -152,10 +154,10 @@ int main(int argc, char* argv[])
 
     #pragma region 面剔除 CULL
 
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_FRONT);
+        //glEnable(GL_CULL_FACE);
+        //glCullFace(GL_FRONT);
         //glCullFace(GL_BACK);
-        glFrontFace(GL_CW);
+        //glFrontFace(GL_CW);
 
     #pragma endregion
 
@@ -175,7 +177,8 @@ int main(int argc, char* argv[])
         Shader cubeShader("Shaders/DebugShader/BaseCube.vert", "Shaders/DebugShader/BaseCube.frag");
         Shader AlphaShader("Shaders/DebugShader/AlphaTest.vert", "Shaders/DebugShader/AlphaTest.frag");
         
-        Shader SampleShader("Shaders/DebugShader/SampleTexture.vert", "Shaders/DebugShader/SampleTexture.frag");
+        // 我觉得还是叫后处理合适一些
+        Shader PostShader("Shaders/DebugShader/PostProcess.vert", "Shaders/DebugShader/PostProcess.frag");
 
         //Shader cubeShader("Shaders/simpleTexture.vert", "Shaders/simpleTexture.frag");
         // Shader lightShader("Shaders/simpleLight.vert", "Shaders/simpleLight.frag");
@@ -372,8 +375,8 @@ int main(int argc, char* argv[])
          AlphaShader.use();
          AlphaShader.setInt("texture1", 0);
 
-         SampleShader.use();
-         SampleShader.setInt("screenTexture", 0);
+         PostShader.use();
+         PostShader.setInt("screenTexture", 0);
 
     #pragma endregion
 
@@ -517,12 +520,12 @@ int main(int argc, char* argv[])
 
     #pragma region 后处理
         
-            glBindFramebuffer(GL_FRAMEBUFFER, 0); // 返回默认
+            glBindFramebuffer(GL_FRAMEBUFFER, 0); // 解绑上一个FrameBuffer
             glDisable(GL_DEPTH_TEST);
             glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
 
-            SampleShader.use();
+            PostShader.use();
             glBindVertexArray(screenVAO);
             glBindTexture(GL_TEXTURE_2D, texColorBuffer);
             glDrawArrays(GL_TRIANGLES, 0, 6);

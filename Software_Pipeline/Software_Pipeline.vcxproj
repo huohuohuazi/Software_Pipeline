@@ -188,8 +188,8 @@
     <None Include="Shaders\DebugShader\DepthTest.vert" />
     <None Include="Shaders\DebugShader\BaseCube.frag" />
     <None Include="Shaders\DebugShader\BaseCube.vert" />
-    <None Include="Shaders\DebugShader\SampleTexture.frag" />
-    <None Include="Shaders\DebugShader\SampleTexture.vert" />
+    <None Include="Shaders\DebugShader\PostProcess.frag" />
+    <None Include="Shaders\DebugShader\PostProcess.vert" />
     <None Include="Shaders\DebugShader\StencilTest.frag" />
     <None Include="Shaders\DebugShader\StencilTest.vert" />
     <None Include="Shaders\directionalLight.frag" />
