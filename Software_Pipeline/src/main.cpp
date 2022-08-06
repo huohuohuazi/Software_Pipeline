@@ -43,6 +43,8 @@
     unsigned int LoadTexture(char const* path);
     void DrawOutline(Shader ourlineShader, int step, float& scale, float targetScale = 1.1);
     // void DrawOutline(Shader ourlineShader, int step, float& scale);
+    unsigned int CreateEmptyTexture();
+
 #pragma endregion
 
 
@@ -172,6 +174,8 @@ int main(int argc, char* argv[])
         Shader outlineShader("Shaders/DebugShader/StencilTest.vert", "Shaders/DebugShader/StencilTest.frag");
         Shader cubeShader("Shaders/DebugShader/BaseCube.vert", "Shaders/DebugShader/BaseCube.frag");
         Shader AlphaShader("Shaders/DebugShader/AlphaTest.vert", "Shaders/DebugShader/AlphaTest.frag");
+        
+        Shader SampleShader("Shaders/DebugShader/SampleTexture.vert", "Shaders/DebugShader/SampleTexture.frag");
 
         //Shader cubeShader("Shaders/simpleTexture.vert", "Shaders/simpleTexture.frag");
         // Shader lightShader("Shaders/simpleLight.vert", "Shaders/simpleLight.frag");
@@ -261,6 +265,18 @@ int main(int argc, char* argv[])
            vegetation.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
            vegetation.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
 
+           // 正方形
+           float quadVertices[] = {
+               // positions   // texCoords
+               -1.0f,  1.0f,  0.0f, 1.0f,
+               -1.0f, -1.0f,  0.0f, 0.0f,
+                1.0f, -1.0f,  1.0f, 0.0f,
+
+               -1.0f,  1.0f,  0.0f, 1.0f,
+                1.0f, -1.0f,  1.0f, 0.0f,
+                1.0f,  1.0f,  1.0f, 1.0f
+           };
+
         //C:/Users/DELL/Desktop/PBRT/Software_Pipeline/Software_Pipeline/
         //Model nanosuitModel("resources/objects/nanosuit/nanosuit.fbx");
         //Model nanosuitModel("resources/objects/nanosuit/nanosuit.fbx");
@@ -276,13 +292,10 @@ int main(int argc, char* argv[])
 
     #pragma region VBO
 
-        // FrameBuffer Object
-        unsigned int FBO;
-        glGenFramebuffers(1, &FBO);
-
          unsigned int cubeVBO, cubeVAO;
          unsigned int planeVBO, planeVAO;
          unsigned int grassVBO, grassVAO;
+         unsigned int screenVBO, screenVAO;
 
          VBOmanager cube(&cubeVBO);
          cube.addStaticBuffer(cubeVertices, sizeof(cubeVertices));
@@ -302,8 +315,44 @@ int main(int argc, char* argv[])
          grass.BindVAO(grassVAO);
          grass.addVertex(5, std::vector<int>{3, 2});
 
+         VBOmanager screen(&screenVBO);
+         screen.addStaticBuffer(quadVertices, sizeof(quadVertices));
+         screen.addVAO(&screenVAO);
+         screen.BindVAO(screenVAO);
+         screen.addVertex(4, std::vector<int>{2, 2});
+
          // unsigned int diffuseMap = LoadTexture("resources/textures/container2.png");
          // unsigned int specularMap = LoadTexture("resources/textures/container2_specular.png");
+
+    #pragma endregion
+
+
+
+    #pragma region FBO
+
+         // FrameBuffer Object
+         unsigned int FBO;
+         glGenFramebuffers(1, &FBO);
+         glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+         unsigned int texColorBuffer = CreateEmptyTexture();
+
+         // 讲Texture绑定到FBO上,Texture是16位的
+         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
+    
+         // RenderBuffer Object渲染缓冲对象
+         unsigned int RBO;
+         glGenRenderbuffers(1, &RBO);
+         glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+
+         // 内部格式为GL_DEPTH24_STENCIL8，Depth是8位的
+         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, Width, Height);
+         glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+             std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     #pragma endregion
 
@@ -315,12 +364,16 @@ int main(int argc, char* argv[])
          //unsigned int grassTexture = LoadTexture("resources/textures/grass.png");
          unsigned int windowTexture = LoadTexture("resources/textures/window.png");
 
-         cubeShader.use();
          // cubeShader.setInt("material.diffuse", 0);
          // cubeShader.setInt("material.specular", 1);
+         cubeShader.use();
          cubeShader.setInt("texture1", 0);
+
          AlphaShader.use();
          AlphaShader.setInt("texture1", 0);
+
+         SampleShader.use();
+         SampleShader.setInt("screenTexture", 0);
 
     #pragma endregion
 
@@ -345,7 +398,12 @@ int main(int argc, char* argv[])
 
             // 渲染
             // 清除 颜色缓冲 与 深度缓冲 与 模板缓冲
+            // 指定帧缓冲对象
+            glBindFramebuffer(GL_FRAMEBUFFER, FBO);
             glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+
+            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         #pragma endregion
@@ -457,6 +515,21 @@ int main(int argc, char* argv[])
         #pragma endregion
 
 
+    #pragma region 后处理
+        
+            glBindFramebuffer(GL_FRAMEBUFFER, 0); // 返回默认
+            glDisable(GL_DEPTH_TEST);
+            glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            SampleShader.use();
+            glBindVertexArray(screenVAO);
+            glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    #pragma endregion
+
+
 
             /* 
 #pragma region Lighting
@@ -544,6 +617,8 @@ int main(int argc, char* argv[])
         glDeleteBuffers(1, &planeVBO);
         glDeleteBuffers(1, &grassVAO);
         glDeleteBuffers(1, &grassVBO);
+        glDeleteBuffers(1, &screenVAO);
+        glDeleteBuffers(1, &screenVBO);
 
     #pragma endregion
 
@@ -695,6 +770,24 @@ unsigned int LoadTexture(char const* path)
     return textureID;
 }
 
+// 生成一个纹理缓冲对象
+unsigned int CreateEmptyTexture()
+{
+    // 生成纹理
+    unsigned int texColorBuffer;
+    glGenTextures(1, &texColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+
+    // Texture只分配了Width*Height的内存但没有填充数据
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    return texColorBuffer;
+}
+
 // 描边
 void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
 {
@@ -739,4 +832,5 @@ void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
     }
 }
 
-    
+
+

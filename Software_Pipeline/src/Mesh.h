@@ -159,7 +159,7 @@ public:
         // std::cout << "textures.size=" << textures.size() << endl;
         for (unsigned int i = 0; i < textures.size(); i++)
         {
-            glActiveTexture(GL_TEXTURE0 + i); // 激活相应的纹理单元
+            
 
             string number;// 获取纹理在该纹理种类(diffuse/specular/normal)中的编号
             string name = textures[i].type;
@@ -178,8 +178,11 @@ public:
             // shader.setInt(("material." + name + number).c_str(), i);
             // std::cout << "MaterialName : " << (name + number).c_str() <<endl;
 
+            // 让shader中的待采样的纹理名与 索引i 相关联，对应了不同的Texture0+i
             glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
-            //glActiveTexture(GL_TEXTURE0);
+            
+            glActiveTexture(GL_TEXTURE0 + i); // 激活相应的纹理采样器Texture0+i
+            // 有很多采样器，但一次只有一个状态机，指定采样器采样的纹理对象
             glBindTexture(GL_TEXTURE_2D, textures[i].id);
 
             // glUniform1i函数用于给shader指定显存中的数据，如主函数中用于给shader指定texture的代码setInt

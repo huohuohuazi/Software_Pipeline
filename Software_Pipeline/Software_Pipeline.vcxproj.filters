@@ -84,5 +84,7 @@
     <None Include="Shaders\DebugShader\BaseCube.vert" />
     <None Include="Shaders\DebugShader\AlphaTest.frag" />
     <None Include="Shaders\DebugShader\AlphaTest.vert" />
+    <None Include="Shaders\DebugShader\SampleTexture.vert" />
+    <None Include="Shaders\DebugShader\SampleTexture.frag" />
   </ItemGroup>
 </Project>
