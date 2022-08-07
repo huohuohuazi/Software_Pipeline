@@ -190,6 +190,11 @@
     <None Include="Shaders\DebugShader\BaseCube.vert" />
     <None Include="Shaders\DebugShader\PostProcess.frag" />
     <None Include="Shaders\DebugShader\PostProcess.vert" />
+    <None Include="Shaders\DebugShader\ReflectEnvironment.frag" />
+    <None Include="Shaders\DebugShader\ReflectEnvironment.vert" />
+    <None Include="Shaders\DebugShader\RefractionEnvironment.frag" />
+    <None Include="Shaders\DebugShader\Skybox.frag" />
+    <None Include="Shaders\DebugShader\Skybox.vert" />
     <None Include="Shaders\DebugShader\StencilTest.frag" />
     <None Include="Shaders\DebugShader\StencilTest.vert" />
     <None Include="Shaders\directionalLight.frag" />

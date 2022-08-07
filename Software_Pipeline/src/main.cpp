@@ -44,6 +44,7 @@
     void DrawOutline(Shader ourlineShader, int step, float& scale, float targetScale = 1.1);
     // void DrawOutline(Shader ourlineShader, int step, float& scale);
     unsigned int CreateEmptyTexture();
+    unsigned int LoadCubeTexture(vector<string> textures_faces);
 
 #pragma endregion
 
@@ -127,9 +128,14 @@ int main(int argc, char* argv[])
 
         // 模板缓冲
         glEnable(GL_STENCIL_TEST);
+
+        // 这个是进行一次模板测试，与设定的掩码进行比较，可以自定义处理的方法
         glStencilFunc(GL_EQUAL, 1, 0xFF);
         // 1为参考值，即比较的内容
         // 0xFF为掩码，会在用参考值比较前进行与(AND)运算，默认为全1
+
+        // 这个是渲染时要进行的掩码
+        //glStencilMask(0xFF);
 
         // 规定缓冲行为
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
@@ -169,20 +175,23 @@ int main(int argc, char* argv[])
 
 
 
-    #pragma region 指定Shader
+    #pragma region 加载Shader
 
         // 加载shader
-        //Shader cubeShader("Shaders/DebugShader/DepthTest.vert", "Shaders/DebugShader/DepthTest.frag");
         Shader outlineShader("Shaders/DebugShader/StencilTest.vert", "Shaders/DebugShader/StencilTest.frag");
         Shader cubeShader("Shaders/DebugShader/BaseCube.vert", "Shaders/DebugShader/BaseCube.frag");
         Shader AlphaShader("Shaders/DebugShader/AlphaTest.vert", "Shaders/DebugShader/AlphaTest.frag");
-        
+        Shader ReflectionShader("Shaders/DebugShader/ReflectEnvironment.vert", "Shaders/DebugShader/ReflectEnvironment.frag");
+        Shader RefractionShader("Shaders/DebugShader/ReflectEnvironment.vert", "Shaders/DebugShader/RefractionEnvironment.frag");
+
+
+        // 天空球
+        Shader SkyboxShader("Shaders/DebugShader/Skybox.vert", "Shaders/DebugShader/Skybox.frag");
+
         // 我觉得还是叫后处理合适一些
         Shader PostShader("Shaders/DebugShader/PostProcess.vert", "Shaders/DebugShader/PostProcess.frag");
 
-        //Shader cubeShader("Shaders/simpleTexture.vert", "Shaders/simpleTexture.frag");
-        // Shader lightShader("Shaders/simpleLight.vert", "Shaders/simpleLight.frag");
-        // Shader modelShader("Shaders/simpleModel.vert", "Shaders/simpleModel.frag");
+        //Shader modelShader("Shaders/simpleModel.vert", "Shaders/simpleModel.frag");
 
     #pragma endregion
 
@@ -190,6 +199,52 @@ int main(int argc, char* argv[])
 
     #pragma region 模型信息
         
+           // 天空球
+           float skyboxVertices[] = {
+            // positions          
+            -1.0f,  1.0f, -1.0f,
+            -1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+
+            -1.0f, -1.0f,  1.0f,
+            -1.0f, -1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f,  1.0f,
+            -1.0f, -1.0f,  1.0f,
+
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+
+            -1.0f, -1.0f,  1.0f,
+            -1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f, -1.0f,  1.0f,
+            -1.0f, -1.0f,  1.0f,
+
+            -1.0f,  1.0f, -1.0f,
+             1.0f,  1.0f, -1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+            -1.0f,  1.0f,  1.0f,
+            -1.0f,  1.0f, -1.0f,
+
+            -1.0f, -1.0f, -1.0f,
+            -1.0f, -1.0f,  1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+            -1.0f, -1.0f,  1.0f,
+             1.0f, -1.0f,  1.0f
+        };
+
            // （一个）方块
            // 更新为按照顺时针方向定义的
            float cubeVertices[] = {
@@ -237,6 +292,51 @@ int main(int argc, char* argv[])
                -0.5f,  0.5f,  0.5f,  0.0f, 0.0f  // bottom-left        
            };
 
+           //  反射方块
+           float ReflectionCubeVertices[] = {
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+
+    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+
+     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+
+    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+
+    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+           };
+
            // 地板
            float planeVertices[] = {
                // positions          // texture Coords (note we set these higher than 1 (together with GL_REPEAT as texture wrapping mode). this will cause the floor texture to repeat)
@@ -279,53 +379,56 @@ int main(int argc, char* argv[])
                 1.0f, -1.0f,  1.0f, 0.0f,
                 1.0f,  1.0f,  1.0f, 1.0f
            };
-
-        //C:/Users/DELL/Desktop/PBRT/Software_Pipeline/Software_Pipeline/
-        //Model nanosuitModel("resources/objects/nanosuit/nanosuit.fbx");
-        //Model nanosuitModel("resources/objects/nanosuit/nanosuit.fbx");
-        
-        //Model nanosuitModel(exePath.substr(0, exePath.find_last_of('\\')) + "\\resources\\objects\\nanosuit\\nanosuit.obj");
-         //Model nanosuitModel("resources/objects/survival-guitar-backpack/source/Survival_BackPack_2.fbx");
-         //Model nanosuitModel("resources/objects/simple_table.obj");
-         
-    
+   
     #pragma endregion
 
 
 
     #pragma region VBO
 
+         unsigned int skyboxVBO, skyboxVAO;
          unsigned int cubeVBO, cubeVAO;
+         unsigned int reflectioncubeVBO, reflectioncubeVAO;
          unsigned int planeVBO, planeVAO;
          unsigned int grassVBO, grassVAO;
          unsigned int screenVBO, screenVAO;
+         
+
+         VBOmanager skybox(&skyboxVBO);
+         skybox.addStaticBuffer(skyboxVertices, sizeof(skyboxVertices));
+         skybox.addVAO(&skyboxVAO);
+         skybox.BindVAO(skyboxVAO);
+         skybox.addVertex(3, std::vector<int>{3});// Pos*3
 
          VBOmanager cube(&cubeVBO);
          cube.addStaticBuffer(cubeVertices, sizeof(cubeVertices));
          cube.addVAO(&cubeVAO);
          cube.BindVAO(cubeVAO);
-         cube.addVertex(5, std::vector<int>{3, 2});
+         cube.addVertex(5, std::vector<int>{3, 2});// Pos*3 Texcoord*2
+
+         VBOmanager reflectioncube(&reflectioncubeVBO);
+         reflectioncube.addStaticBuffer(ReflectionCubeVertices, sizeof(ReflectionCubeVertices));
+         reflectioncube.addVAO(&reflectioncubeVAO);
+         reflectioncube.BindVAO(reflectioncubeVAO);
+         reflectioncube.addVertex(6, std::vector<int>{3, 3});// Pos*3 Normal*2
 
          VBOmanager floor(&planeVBO);
          floor.addStaticBuffer(planeVertices, sizeof(planeVertices));
          floor.addVAO(&planeVAO);
          floor.BindVAO(planeVAO);
-         floor.addVertex(5, std::vector<int>{3, 2});
+         floor.addVertex(5, std::vector<int>{3, 2});// Pos*3 Texcoord*2
 
          VBOmanager grass(&grassVBO);
          grass.addStaticBuffer(transparentVertices, sizeof(planeVertices));
          grass.addVAO(&grassVAO);
          grass.BindVAO(grassVAO);
-         grass.addVertex(5, std::vector<int>{3, 2});
+         grass.addVertex(5, std::vector<int>{3, 2});// Pos*3 Texcoord*2
 
          VBOmanager screen(&screenVBO);
          screen.addStaticBuffer(quadVertices, sizeof(quadVertices));
          screen.addVAO(&screenVAO);
          screen.BindVAO(screenVAO);
-         screen.addVertex(4, std::vector<int>{2, 2});
-
-         // unsigned int diffuseMap = LoadTexture("resources/textures/container2.png");
-         // unsigned int specularMap = LoadTexture("resources/textures/container2_specular.png");
+         screen.addVertex(4, std::vector<int>{2, 2});// Pos*2 Texcoord*2
 
     #pragma endregion
 
@@ -347,7 +450,7 @@ int main(int argc, char* argv[])
          glGenRenderbuffers(1, &RBO);
          glBindRenderbuffer(GL_RENDERBUFFER, RBO);
 
-         // 内部格式为GL_DEPTH24_STENCIL8，Depth是8位的
+         // 内部格式为GL_DEPTH24_STENCIL8，Depth是24位的,Stencil是8位的
          glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, Width, Height);
          glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
@@ -360,13 +463,29 @@ int main(int argc, char* argv[])
     #pragma endregion
 
 
-    #pragma region Shaders Params
+    #pragma region 加载纹理
 
          unsigned int cubeTexture = LoadTexture("resources/textures/cube.jpg");
          unsigned int floorTexture = LoadTexture("resources/textures/floor.jpg");
          //unsigned int grassTexture = LoadTexture("resources/textures/grass.png");
          unsigned int windowTexture = LoadTexture("resources/textures/window.png");
 
+         vector<std::string> skyboxPath
+         {
+             "resources/textures/skybox/right.jpg",
+             "resources/textures/skybox/left.jpg",
+             "resources/textures/skybox/top.jpg",
+             "resources/textures/skybox/bottom.jpg",
+             "resources/textures/skybox/front.jpg",
+             "resources/textures/skybox/back.jpg"
+         };
+
+         unsigned int skyboxTexture = LoadCubeTexture(skyboxPath);
+
+    #pragma endregion
+
+    #pragma region 设置为Shader中的纹理指定索引
+         
          // cubeShader.setInt("material.diffuse", 0);
          // cubeShader.setInt("material.specular", 1);
          cubeShader.use();
@@ -375,8 +494,17 @@ int main(int argc, char* argv[])
          AlphaShader.use();
          AlphaShader.setInt("texture1", 0);
 
-         PostShader.use();
-         PostShader.setInt("screenTexture", 0);
+         // PostShader.use();
+         // PostShader.setInt("screenTexture", 0);
+
+         SkyboxShader.use();
+         SkyboxShader.setInt("skybox", 0);
+
+         ReflectionShader.use();
+         ReflectionShader.setInt("skybox", 0);
+
+         RefractionShader.use();
+         RefractionShader.setInt("skybox", 0);
 
     #pragma endregion
 
@@ -389,15 +517,17 @@ int main(int argc, char* argv[])
         while (!glfwWindowShouldClose(window))
         {
 
-        #pragma region 准备工作
+        #pragma region 准备工作：计算DeltaTime 处理输入 清理缓冲区 恢复状态机
 
             // 先计算deltatime
             float currentFrame = glfwGetTime();
             deltaTime = currentFrame - lastFrame;
             lastFrame = currentFrame;
             cout << "\rFPS: " << 1 / deltaTime << std::flush;
+
             // 输入
             processInput(window);
+
 
             // 渲染
             // 清除 颜色缓冲 与 深度缓冲 与 模板缓冲
@@ -410,7 +540,6 @@ int main(int argc, char* argv[])
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         #pragma endregion
-
 
         #pragma region VP矩阵
 
@@ -431,36 +560,78 @@ int main(int argc, char* argv[])
             AlphaShader.setMat4("view", view);
             AlphaShader.setMat4("projection", projection);
 
+            ReflectionShader.use();
+            ReflectionShader.setMat4("view", view);
+            ReflectionShader.setMat4("projection", projection);
+
+            RefractionShader.use();
+            RefractionShader.setMat4("view", view);
+            RefractionShader.setMat4("projection", projection);
+
+            // Skybox的投影矩阵单独算
+
         #pragma endregion
 
 
-        #pragma region Use Bind Set And Draw
+
+        #pragma region 场景中的一般物体
 
             float scale = 1.1f;
 
             // STEP : 0 : 画别的
             DrawOutline(outlineShader, 0, scale);
+
             // floor
+            cubeShader.use();
             glBindVertexArray(planeVAO);
             glBindTexture(GL_TEXTURE_2D, floorTexture);
             cubeShader.setMat4("model", glm::mat4(1.0f));
+            cubeShader.setVec3("cameraPos", camera.Position);
             glDrawArrays(GL_TRIANGLES, 0, 6);
-            glBindVertexArray(0);
 
+
+            // ReflectionCube
+            ReflectionShader.use();
+            glActiveTexture(GL_TEXTURE0);
+            glBindVertexArray(reflectioncubeVAO);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(2.0f, 0.5f, 0.0f));
+            ReflectionShader.setMat4("model", model);
+            ReflectionShader.setVec3("cameraPos", camera.Position);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+
+            
+            // RefractionCube
+            RefractionShader.use();
+            glBindVertexArray(reflectioncubeVAO);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(4.0f, 0.5f, 0.0f));
+            RefractionShader.setMat4("model", model);
+            RefractionShader.setVec3("cameraPos", camera.Position);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+        #pragma endregion
+
+        #pragma region 立方体及其描边
 
             // STEP : 1  :  pass1，绘制本体
             DrawOutline(outlineShader, 1, scale);
+
             // cubes
+            cubeShader.use();
             glBindVertexArray(cubeVAO);
-            glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, cubeTexture);
             // cube1
-            model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
             cubeShader.setMat4("model", model);
             glDrawArrays(GL_TRIANGLES, 0, 36);
             // cube2
             model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
             cubeShader.setMat4("model", model);
             glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -469,26 +640,47 @@ int main(int argc, char* argv[])
             DrawOutline(outlineShader, 2, scale, 1.1);
             // cubes
             glBindVertexArray(cubeVAO);
-            glBindTexture(GL_TEXTURE_2D, cubeTexture);
+            //glActiveTexture(GL_TEXTURE0);
+            //glBindTexture(GL_TEXTURE_2D, cubeTexture);
             // cube1
             model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+            model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
             model = glm::scale(model, glm::vec3(scale, scale, scale));
             outlineShader.setMat4("model", model);
             glDrawArrays(GL_TRIANGLES, 0, 36);
             // cube2
             model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
             model = glm::scale(model, glm::vec3(scale, scale, scale));
             outlineShader.setMat4("model", model);
             glDrawArrays(GL_TRIANGLES, 0, 36);
 
+        #pragma endregion
 
-            // STEP : 3  :  恢复状态，绘制透明物体
+        #pragma region 天空盒
+
+            // STEP : 3  :  恢复状态，绘制天空盒与其他物体
             DrawOutline(outlineShader, 3, scale);
-            glActiveTexture(GL_TEXTURE0);
 
+            // 天空球在透明物体前面
+            glDepthFunc(GL_LEQUAL);
+            SkyboxShader.use();
+            glBindVertexArray(skyboxVAO);
+            //glActiveTexture(GL_TEXTURE0);
+            // 让w分量恒为1
+            view = glm::mat4(glm::mat3(camera.GetView())); // remove translation from the view matrix
+            SkyboxShader.setMat4("view", view);
+            SkyboxShader.setMat4("projection", projection);
 
+            glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(0);
+            glDepthFunc(GL_LESS);
+
+        #pragma endregion
+
+        #pragma region 透明物体
+            
             // windows
             // 透明物体之前会通过深度测试，因此alpha为0的部分仍然会挡住后面的半透明物体
             glBindVertexArray(grassVAO);
@@ -503,9 +695,9 @@ int main(int argc, char* argv[])
                 // dis是键，用来索引vegetation[i]
                 // 通过map的迭代器，可以顺序访问透明物体
             }
-            
+
             // 反向迭代器
-            for (std::map<float, glm::vec3>::reverse_iterator iter= sortedAlpha.rbegin();iter!=sortedAlpha.rend();iter++)
+            for (std::map<float, glm::vec3>::reverse_iterator iter = sortedAlpha.rbegin(); iter != sortedAlpha.rend(); iter++)
             {
                 model = glm::mat4(1.0f);
                 model = glm::translate(model, iter->second);
@@ -517,8 +709,9 @@ int main(int argc, char* argv[])
 
         #pragma endregion
 
+        
 
-    #pragma region 后处理
+        #pragma region 后处理
         
             glBindFramebuffer(GL_FRAMEBUFFER, 0); // 解绑上一个FrameBuffer
             glDisable(GL_DEPTH_TEST);
@@ -530,7 +723,7 @@ int main(int argc, char* argv[])
             glBindTexture(GL_TEXTURE_2D, texColorBuffer);
             glDrawArrays(GL_TRIANGLES, 0, 6);
 
-    #pragma endregion
+        #pragma endregion
 
 
 
@@ -791,6 +984,52 @@ unsigned int CreateEmptyTexture()
     return texColorBuffer;
 }
 
+// 立方体贴图，传入路径集合
+unsigned int LoadCubeTexture(vector<string> textures_faces)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    unsigned char* data;
+    for (unsigned int i = 0; i < textures_faces.size(); i++)
+    {
+        data = stbi_load(textures_faces[i].c_str(), &width, &height, &nrChannels, 0);
+        
+        if (data)
+        {
+            GLenum format = GL_RGB;
+            if (nrChannels == 1)// 灰度图
+                format = GL_RED;
+            else if (nrChannels == 3)// RGB图
+                format = GL_RGB;
+            else if (nrChannels == 4)// RGBA图
+                format = GL_RGBA;
+
+            
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+            stbi_image_free(data); 
+        }
+        else
+        {
+            std::cout << "Load single piece of Cube Texture FAILED! " << textures_faces[i] << std::endl;
+            stbi_image_free(data);
+        }    
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    std::cout << "Load Cube Texture SUCCESS! " << " ,ID=" << textureID << std::endl;
+    return textureID;
+}
+
+
 // 描边
 void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
 {
@@ -812,10 +1051,9 @@ void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
 
     // pass 1
     if (step == 1){
-        // 第一次渲染时，设置模板测试为GL_ALWAYS，都通过
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        // 第一次渲染时，设置模板测试为0xFF，更新所有渲染的像素的模板值
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);// 此时被绘制的地方的模板值都更新为1
         glStencilMask(0xFF);
-        // 此时被绘制的地方的模板值都更新为1
     }
     // pass2
     if (step == 2)
@@ -823,7 +1061,8 @@ void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
         // 禁用模板写入与深度测试
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);// 只有掩码值不为1的部分通过测试，即只绘制在之前绘制的箱子之外的部分
         glStencilMask(0x00); // 掩码全部不通过
-        glDisable(GL_DEPTH_TEST);
+        // 不能关深度测试啊。。不然后面绘制的会挡住
+        //glDisable(GL_DEPTH_TEST);
         ourlineShader.use();
         scale = targetScale;
     }
@@ -831,7 +1070,7 @@ void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
     if (step == 3){
         glStencilFunc(GL_ALWAYS, 0, 0xFF);
         glStencilMask(0xFF);
-        glEnable(GL_DEPTH_TEST);
+        //glEnable(GL_DEPTH_TEST);
     }
 }
 

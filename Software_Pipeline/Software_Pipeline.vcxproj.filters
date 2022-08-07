@@ -86,5 +86,10 @@
     <None Include="Shaders\DebugShader\AlphaTest.vert" />
     <None Include="Shaders\DebugShader\PostProcess.vert" />
     <None Include="Shaders\DebugShader\PostProcess.frag" />
+    <None Include="Shaders\DebugShader\Skybox.frag" />
+    <None Include="Shaders\DebugShader\Skybox.vert" />
+    <None Include="Shaders\DebugShader\ReflectEnvironment.vert" />
+    <None Include="Shaders\DebugShader\ReflectEnvironment.frag" />
+    <None Include="Shaders\DebugShader\RefractionEnvironment.frag" />
   </ItemGroup>
 </Project>

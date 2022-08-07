@@ -4,7 +4,7 @@ in vec2 TexCoords;
 
 uniform sampler2D screenTexture;
 
-//vec3 Conv(float kernel[9]);
+vec3 Conv(float kernel[9]);
 //vec4 Grayscale(vec4 color_in);
 //vec3 EdgeDetect();
 //vec3 Blur();
@@ -40,8 +40,10 @@ vec3 Blur()
 vec3 Conv(float kernel[9])
 {
     const float offset = 1.0 / 300.0;
+    // 边缘采样可能会出现因为循环边采样而产生的条纹，此时可以设置纹理采样为
+    // GL_CLAMP_TO_EDGE(重复采样边缘)
 
-     vec2 offsets[9] = vec2[](
+    vec2 offsets[9] = vec2[](
         vec2(-offset,  offset), // 左上
         vec2( 0.0f,    offset), // 正上
         vec2( offset,  offset), // 右上
