@@ -99,5 +99,7 @@
     <None Include="Shaders\DebugShader\Model\ShowNormal.geo" />
     <None Include="Shaders\DebugShader\Model\ShowNormal.vert" />
     <None Include="Shaders\DebugShader\Model\ShowNormal.frag" />
+    <None Include="Shaders\DebugShader\InstancingTest.vert" />
+    <None Include="Shaders\DebugShader\InstancingTest.frag" />
   </ItemGroup>
 </Project>

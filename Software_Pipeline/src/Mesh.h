@@ -38,7 +38,7 @@ struct Texture {
 class Mesh {
      
 private:
-    unsigned int VAO, VBO, EBO;
+    
 
     // 设置VBO，批量将顶点、图片等数据写入显存
     void setupMesh()
@@ -47,7 +47,8 @@ private:
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
         glGenBuffers(1, &EBO);
-     
+        
+        cout << "VAO::" << VAO << endl;
         
     #pragma region VBO 
 
@@ -78,7 +79,7 @@ private:
         // 此时，状态机为：设置VAO
         glBindVertexArray(VAO);
 
-        // 顶点位置
+        // 顶点位置s
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
         /*   
@@ -135,6 +136,8 @@ public:
     vector<unsigned int> indices;// aNormal
     vector<Texture> textures;// aTexCoords
     
+    unsigned int VAO=0, VBO=0, EBO=0;
+
     // 从Model中获取数据
     Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
     {
@@ -155,11 +158,10 @@ public:
         unsigned int heightNr = 1;
 
 
-        // 对于该mesh的所有纹理
+        // 若Mesh具有多个纹理，则设置多个纹理单元
         // std::cout << "textures.size=" << textures.size() << endl;
         for (unsigned int i = 0; i < textures.size(); i++)
         {
-            
 
             string number;// 获取纹理在该纹理种类(diffuse/specular/normal)中的编号
             string name = textures[i].type;
@@ -195,19 +197,15 @@ public:
             
         }
 
-
         // 绘制网格
-        
          glBindVertexArray(VAO);
         //Bind大概就是设置opengl状态机，将当前的顶点数组设置为VAO
          //glDrawArrays(GL_TRIANGLES, 0, vertices.size());
-       
-        //DrawElements有问题，一直画不出来
         glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, &indices[0]);
         
 
         // 在结束时，要将纹理状态和VAO状态设置回去
-        // glActiveTexture(GL_TEXTURE0);
+        glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(0);
 
     }

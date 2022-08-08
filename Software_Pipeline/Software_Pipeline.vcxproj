@@ -191,6 +191,8 @@
     <None Include="Shaders\DebugShader\Geometry\GeometryTest.frag" />
     <None Include="Shaders\DebugShader\Geometry\GeometryTest.geo" />
     <None Include="Shaders\DebugShader\Geometry\GeometryTest.vert" />
+    <None Include="Shaders\DebugShader\InstancingTest.frag" />
+    <None Include="Shaders\DebugShader\InstancingTest.vert" />
     <None Include="Shaders\DebugShader\Model\BaseModel.frag" />
     <None Include="Shaders\DebugShader\Model\BaseModel.vert" />
     <None Include="Shaders\DebugShader\Model\ShowNormal.frag" />

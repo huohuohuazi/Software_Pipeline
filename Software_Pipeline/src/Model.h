@@ -21,48 +21,48 @@
 #include "stb_image.h"
 
 
-// 纹理可能不是一个模型独有的，不作为私有变量了
-vector<Texture> textures_loaded;// 已加载的纹理，在重复加载时可以直接取用
-Texture default_texture;
-
 // 读取纹理并加载到显存中，返回于显存中的ID
 unsigned int TextureFromFile(const char* path, const string& directory);
 
-
-// 默认材质，以后用的多
-void loadDefaultTexture()
-{
-    //string pa = "1001_albedo.jpg";
-    string pa = "_WoodFine0058_11_M.jpg";
-
-
-    //string dir = pa.substr(0, pa.find_last_of('/'));
-    //string dir = "resources/objects/survival-guitar-backpack/textures";
-    string dir = "resources/objects/chair";
-    default_texture.id = TextureFromFile(pa.c_str(), dir);
-    default_texture.type = "texture_diffuse";
-    //default_texture.path = "resources/objects/survival-guitar-backpack/textures/1001_albedo.jpg";
-    default_texture.path = "resources/objects/chair/_WoodFine0058_11_M.jpg";
-
-
-    textures_loaded.push_back(default_texture);
-}
 
 
 
 class Model
 {
 private:
-    vector<Mesh> meshes;// 一个模型有多个Mesh
+    
     string directory;// 模型的目录，包括obj、mtl、材质贴图
     map<string, Texture> loadedTextureMap;// 材质与名称映射关系
-    
+    Texture default_texture;
+
+
+     // 默认材质，以后用的多
+    void loadDefaultTexture()
+    {
+        //string pa = "1001_albedo.jpg";
+        string pa = "_WoodFine0058_11_M.jpg";
+
+
+        //string dir = pa.substr(0, pa.find_last_of('/'));
+        //string dir = "resources/objects/survival-guitar-backpack/textures";
+        string dir = "resources/objects/chair";
+        default_texture.id = TextureFromFile(pa.c_str(), dir);
+        default_texture.type = "texture_diffuse";
+        //default_texture.path = "resources/objects/survival-guitar-backpack/textures/1001_albedo.jpg";
+        default_texture.path = "resources/objects/chair/_WoodFine0058_11_M.jpg";
+
+
+        textures_loaded.push_back(default_texture);
+    }
 
     
     // 开始加载模型
     void loadModel(string path)
     {
         std::cout << "Start Loading Model..." << endl;
+
+        // 先计算deltatime
+        float startTime = glfwGetTime();
 
         Assimp::Importer importer;
         // 调用Importer的方法
@@ -80,11 +80,14 @@ private:
         directory = path.substr(0, path.find_last_of('/'));
         std::cout << "Read Model File Success： "<< directory << endl;
 
-        loadDefaultTexture();
+        //loadDefaultTexture();
 
         // 递归处理所有节点
         processNode(scene->mRootNode, scene);
         
+        float endTime = glfwGetTime();
+        cout << "模型导入花费时间：" << endTime-startTime << endl;
+
     }
 
     
@@ -117,9 +120,6 @@ private:
     #pragma region 顶点
 
         // 遍历aiMesh的顶点，处理顶点位置、法线和纹理坐标uv
-        //std::cout << "aimesh->mNumVertices = " << aimesh->mNumVertices << endl;
-        //std::cout << " x= " << aimesh->mVertices[0].x << " y= " << aimesh->mVertices[0].y << " z= " << aimesh->mVertices[0].z << endl;
-        // std::cout << "Process Vertices:" << endl;
         for (unsigned int i = 0; i < aimesh->mNumVertices; i++)
         {
 
@@ -179,9 +179,7 @@ private:
 
     #pragma region 索引
 
-        // std::cout << "Process indices:" << endl;
        // 处理索引(面与顶点关系)
-       // std::cout << "aimesh->mNumFaces = " << aimesh->mNumFaces << endl;
         for (unsigned int i = 0; i < aimesh->mNumFaces; i++)
         {
             aiFace face = aimesh->mFaces[i];
@@ -211,40 +209,22 @@ private:
             processMaterial(aimaterial, scene, aiTextureType_SPECULAR, specularTexture);
             textures.insert(textures.end(), specularTexture.begin(), specularTexture.end());
 
-            /* 
-            // cout<<"Processing Material" << endl;
-            // assimp的material
-            
-            
+            vector<Texture> normalTexture;
+            processMaterial(aimaterial, scene, aiTextureType_NORMALS, normalTexture);
+            textures.insert(textures.end(), normalTexture.begin(), normalTexture.end());
+
+            vector<Texture> heightTexture;
+            processMaterial(aimaterial, scene, aiTextureType_HEIGHT, heightTexture);
+            textures.insert(textures.end(), heightTexture.begin(), heightTexture.end());
 
 
-            // 纹理贴图
-            vector<Texture> diffuseMaps = loadMaterialTextures(aimaterial,
-                aiTextureType_DIFFUSE, "texture_diffuse");
-            textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-
-            // 高光贴图
-            vector<Texture> specularMaps = loadMaterialTextures(aimaterial,
-                aiTextureType_SPECULAR, "texture_specular");
-            textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-
-            // 法线贴图
-            std::vector<Texture> normalMaps = loadMaterialTextures(aimaterial,
-                aiTextureType_HEIGHT, "texture_normal");
-            textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
-
-            // 高度贴图
-            std::vector<Texture> heightMaps = loadMaterialTextures(aimaterial,
-                aiTextureType_AMBIENT, "texture_height");
-            textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
-            */
         }
         // 如果没有材质，则指定为默认材质                                                               
         //if (textures.size() == 0)
         else
         {
             cout << "Use Defualt Texture..." << endl;
-            textures.push_back(default_texture);
+            // textures.push_back(default_texture);
         }
         
         cout << "Texture Number:" << textures.size() << endl;
@@ -252,63 +232,11 @@ private:
     #pragma endregion
 
         //整合为Mesh对象
-        cout << "Size of vertices=" << vertices.size() << " Size of indices=" << indices.size() << " Size of textures=" << textures.size() << endl;
+        // cout << "Size of vertices=" << vertices.size() << " Size of indices=" << indices.size() << " Size of textures=" << textures.size() << endl;
         return Mesh(vertices, indices,textures);
     
 }
     
-    /*
-    // 将assimp的材质转化为mesh格式。一次操作同种类型的材质贴图
-    vector<Texture> loadMaterialTextures(aiMaterial* aimat, aiTextureType type, string typeName)
-    {
-        vector<Texture> textures;
-   
-        // std::cout << "Nunber of Property:: " << aimat->mNumProperties << endl;
-        // cout << aimat->mProperties[0]->mKey.C_Str() << aimat->mProperties[1]->mKey.C_Str() << endl;
-        //std::cout << "Type : " << type <<" Num:" << aimat->GetTextureCount(type) << endl;
-        // 这里做一个优化，开辟一个数组用于保存已经加载过的纹理，可以直接从内存/显存中取，而不用IO读取
-        
-        // cout << "Type: " << type << " = " << aimat->GetTextureCount(type);
-        for (unsigned int i = 0; i < aimat->GetTextureCount(type); i++)
-        {
-
-            aiString str;
-            aimat->GetTexture(type, i, &str);
-            bool skip = false;
-            std::cout << "String:" << str.C_Str() << endl;
-            // 每次加载时遍历一下已加载的纹理名称，如有重复则跳过
-            for (unsigned int j = 0; j < textures_loaded.size(); j++)
-            {
-                // string_compare
-                if (std::strcmp(textures_loaded[j].path.data, str.C_Str()) == 0)
-                {
-                    std::cout << "SKIP" << endl;
-                    // 对于重复的，则直接从数组中读取
-                    textures.push_back(textures_loaded[j]);
-                    skip = true;
-                    break;
-                }
-            }
-            if (!skip)
-            {   
-                cout << "No SKIP" << endl;
-                // 如果纹理还没有被加载，则加载它
-                Texture texture;
-
-                // id是纹理于显存中的ID
-                texture.id = TextureFromFile(str.C_Str(), directory);
-                texture.type = typeName;
-                texture.path = str.C_Str();
-                textures.push_back(texture);
-                textures_loaded.push_back(texture); // 添加到已加载的纹理中
-            }
-        
-        }
-        
-        return textures;
-
-    }
-    */
     // 新方法？
     bool processMaterial(const aiMaterial* matPtr, const aiScene* sceneObjPtr,const aiTextureType textureType, std::vector<Texture>& textures)
     {
@@ -336,21 +264,25 @@ private:
                     << retStatus << std::endl;
                 continue;
             }
+
+            // 建立路径与材质的映射关系
             std::string absolutePath = this->directory + "/" + textPath.C_Str();
             map<string, Texture>::const_iterator it = this->loadedTextureMap.find(absolutePath);
+
             if (it == this->loadedTextureMap.end()) // 检查是否已经加载过了
             {
+                // 如果纹理还没有被加载，则加载它
                 //GLuint textId = TextureHelper::load2DTexture(absolutePath.c_str());
-
-                //text.id = TextureFromFile(absolutePath.c_str(), directory);
-                text.id = TextureFromFile(textPath.C_Str(), directory);
-                text.path = absolutePath;
+                text.id = TextureFromFile(textPath.C_Str(), directory);// id是纹理于显存中的ID
+                text.path = absolutePath;// 路径是相对路径
                 text.type = textureType;
                 textures.push_back(text);
+                textures_loaded.push_back(text);
                 loadedTextureMap[absolutePath] = text;
             }
             else
             {
+                // 若已经加载到内存，则直接从内存读取
                 textures.push_back(it->second);
             }
         }
@@ -358,8 +290,12 @@ private:
     }
 
 
+   
 public:
-    
+    vector<Mesh> meshes;// 一个模型有多个Mesh
+    vector<Texture> textures_loaded;// 已加载的纹理，在重复加载时可以直接取用
+
+
     // 构造函数，加载模型
     Model(const char* path)
     {
@@ -369,6 +305,7 @@ public:
     {
         loadModel(path);
     }
+
     // 使用shader绘制model（遍历绘制mesh）
     void Draw(Shader shader)
     {

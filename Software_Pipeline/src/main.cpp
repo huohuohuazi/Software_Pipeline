@@ -64,6 +64,7 @@
     #define GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX 0x9048
     #define GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX 0x9049
 
+
 #pragma endregion
 
 
@@ -176,6 +177,49 @@ int main(int argc, char* argv[])
         
 #pragma endregion
 
+    #pragma region Unifrom块
+
+        unsigned int VPMatricxBlock;
+        glGenBuffers(1, &VPMatricxBlock);
+        glBindBuffer(GL_UNIFORM_BUFFER, VPMatricxBlock);
+        glBufferData(GL_UNIFORM_BUFFER, 128, NULL, GL_STATIC_DRAW); // 分配152字节的内存
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+        // 链接到绑定点1
+        glBindBufferBase(GL_UNIFORM_BUFFER, 1, VPMatricxBlock);
+
+    #pragma endregion
+
+    #pragma region FBO
+
+        // FrameBuffer Object
+        unsigned int FBO;
+        glGenFramebuffers(1, &FBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+        unsigned int texColorBuffer = CreateEmptyTexture();
+
+        // 讲Texture绑定到FBO上,Texture是16位的
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
+
+        // RenderBuffer Object渲染缓冲对象
+        unsigned int RBO;
+        glGenRenderbuffers(1, &RBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+
+        // 内部格式为GL_DEPTH24_STENCIL8，Depth是24位的,Stencil是8位的
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, Width, Height);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    #pragma endregion
+
+
+
 
 
     #pragma region 加载Shader
@@ -188,7 +232,7 @@ int main(int argc, char* argv[])
         Shader RefractionShader("Shaders/DebugShader/ReflectEnvironment.vert", "Shaders/DebugShader/RefractionEnvironment.frag");
         // 三个参数的构造函数，最后一个是几何着色器路径
         //Shader PointsShader("Shaders/DebugShader/Geometry/GeometryTest.vert", "Shaders/DebugShader/Geometry/GeometryTest.frag","Shaders/DebugShader/Geometry/GeometryTest.geo");
-        Shader ShowNormalShader("Shaders/DebugShader/Model/ShowNormal.vert", "Shaders/DebugShader/Model/ShowNormal.frag","Shaders/DebugShader/Model/ShowNormal.geo");
+        //Shader ShowNormalShader("Shaders/DebugShader/Model/ShowNormal.vert", "Shaders/DebugShader/Model/ShowNormal.frag","Shaders/DebugShader/Model/ShowNormal.geo");
 
 
         // 天空球
@@ -197,7 +241,10 @@ int main(int argc, char* argv[])
         // 我觉得还是叫后处理合适一些
         Shader PostShader("Shaders/DebugShader/PostProcess.vert", "Shaders/DebugShader/PostProcess.frag");
 
+        // 模型（无光照）
         Shader modelShader("Shaders/DebugShader/Model/BaseModel.vert", "Shaders/DebugShader/Model/BaseModel.frag");
+        Shader InstancingShader("Shaders/DebugShader/InstancingTest.vert", "Shaders/DebugShader/InstancingTest.frag");
+
 
     #pragma endregion
 
@@ -248,11 +295,12 @@ int main(int argc, char* argv[])
 
 
 
-
     #pragma region 模型信息
         
-           Model human("resources/objects/nanosuit/nanosuit.obj");
-
+           // Model human("resources/objects/nanosuit/nanosuit.obj");
+           // Model ball("resources/objects/cube.obj");
+           Model planet("resources/objects/planet/planet.obj");
+        
            // 天空球
            float skyboxVertices[] = {
             // positions          
@@ -436,13 +484,12 @@ int main(int argc, char* argv[])
    
             
            // 四个点
-         
-           float pointVertices[] = {
-    -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,1.0f, // 左上
-     0.5f,  0.5f, 0.0f, 1.0f, 0.0f,1.0f, // 右上
-     0.5f, -0.5f, 0.0f, 0.0f, 1.0f,1.0f, // 右下
-    -0.5f, -0.5f, 1.0f, 1.0f, 0.0f,1.0f  // 左下
-           };
+         //       float pointVertices[] = {
+    //-0.5f,  0.5f, 1.0f, 0.0f, 0.0f,1.0f, // 左上
+    // 0.5f,  0.5f, 0.0f, 1.0f, 0.0f,1.0f, // 右上
+    // 0.5f, -0.5f, 0.0f, 0.0f, 1.0f,1.0f, // 右下
+    //-0.5f, -0.5f, 1.0f, 1.0f, 0.0f,1.0f  // 左下
+    //       };
 
     #pragma endregion
 
@@ -501,47 +548,85 @@ int main(int argc, char* argv[])
 
     #pragma endregion
 
-    #pragma region Unifrom块
-         
-         unsigned int VPMatricxBlock;
-         glGenBuffers(1, &VPMatricxBlock);
-         glBindBuffer(GL_UNIFORM_BUFFER, VPMatricxBlock);
-         glBufferData(GL_UNIFORM_BUFFER, 128, NULL, GL_STATIC_DRAW); // 分配152字节的内存
-         glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    #pragma region Instancing
 
-         // 链接到绑定点1
-         glBindBufferBase(GL_UNIFORM_BUFFER, 1, VPMatricxBlock);
+         int planet_num = 1000;
+
+         glm::mat4* modelMatrices;
+         modelMatrices = new glm::mat4[planet_num];
+
+         srand(static_cast<unsigned int>(glfwGetTime()));
+
+         float radius = 25.0;
+         float offset = 5.0f;
+
+         // 设置M矩阵的内容
+         for (unsigned int i = 0; i < planet_num; i++)
+         {
+             glm::mat4 model = glm::mat4(1.0f);
+
+             // 1. 位移：分布在半径为 radius 的圆形上，偏移的范围是[-offset, offset]
+             float angle = (float)i / (float)planet_num * 360.0f;
+             float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+             float x = sin(angle) * radius + displacement;
+             displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+             float y = displacement * 0.4f; // keep height of asteroid field smaller compared to width of x and z
+             displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+             float z = cos(angle) * radius + displacement;
+             /*float x =  rand() % 20;
+             float y =  rand() % 20;
+             float z = -20 + rand() % 20;*/
+
+             model = glm::translate(model, glm::vec3(x, y, z));
+
+             // 2. 缩放：在 0.05 和 0.25f 之间缩放
+             float scale = static_cast<float>((rand() % 20) / 100.0 + 0.05);
+             model = glm::scale(model, glm::vec3(scale));
+
+             // 3. 旋转：绕着一个（半）随机选择的旋转轴向量进行随机的旋转
+             float rotAngle = static_cast<float>((rand() % 360));
+             model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
+
+             // cout << "(x,y,z) = (" << x<<"," << y << "," << z << ") , scale = " << scale << endl;
+
+             // 4. 添加到矩阵的数组中
+             modelMatrices[i] = model;
+         }
+
+         unsigned int PlanetInstancingBuffer;
+         glGenBuffers(1, &PlanetInstancingBuffer);
+         glBindBuffer(GL_ARRAY_BUFFER, PlanetInstancingBuffer);
+         glBufferData(GL_ARRAY_BUFFER, planet_num * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
+
+         // 为每个Mesh添加VAO
+         for (unsigned int i = 0; i < planet.meshes.size(); i++)
+         {
+             // 为VAO基础上添加索引
+             unsigned int VAO = planet.meshes[i].VAO;
+             glBindVertexArray(VAO);
+
+             GLsizei vec4Size = sizeof(glm::vec4);
+
+             // 0 : Pos , 1 : Normal , 2 : Texcoord
+             // 3 , 4 , 5 , 6 --> Mat4[1:4]
+             glEnableVertexAttribArray(3);
+             glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(0 * vec4Size));
+             glEnableVertexAttribArray(4);
+             glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(1 * vec4Size));
+             glEnableVertexAttribArray(5);
+             glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(2 * vec4Size));
+             glEnableVertexAttribArray(6);
+             glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(3 * vec4Size));
+
+             glVertexAttribDivisor(3, 1);
+             glVertexAttribDivisor(4, 1);
+             glVertexAttribDivisor(5, 1);
+             glVertexAttribDivisor(6, 1);
+
+             glBindVertexArray(0);
+         }
 
     #pragma endregion
-
-    #pragma region FBO
-
-         // FrameBuffer Object
-         unsigned int FBO;
-         glGenFramebuffers(1, &FBO);
-         glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-         unsigned int texColorBuffer = CreateEmptyTexture();
-
-         // 讲Texture绑定到FBO上,Texture是16位的
-         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
-    
-         // RenderBuffer Object渲染缓冲对象
-         unsigned int RBO;
-         glGenRenderbuffers(1, &RBO);
-         glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-
-         // 内部格式为GL_DEPTH24_STENCIL8，Depth是24位的,Stencil是8位的
-         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, Width, Height);
-         glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
-
-         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-             std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    #pragma endregion
-
 
 
 
@@ -563,7 +648,7 @@ int main(int argc, char* argv[])
             lastFrame = currentFrame;
 
             frame++;
-            if (frame % 10 == 0) cout << "\rFPS: " << 1 / deltaTime << std::flush;
+            if (frame % 100 == 0) cout << "\rFPS: " << 1 / deltaTime << std::flush;
             if (frame % 60 == 0) frame = 1;
 
             // 输入
@@ -599,9 +684,9 @@ int main(int argc, char* argv[])
 
             glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-            ShowNormalShader.use();
+            /*ShowNormalShader.use();
             ShowNormalShader.setMat4("view", view);
-            ShowNormalShader.setMat4("projection", projection);
+            ShowNormalShader.setMat4("projection", projection);*/
 
             // Skybox的投影矩阵单独算
 
@@ -618,11 +703,35 @@ int main(int argc, char* argv[])
             cubeShader.use();
             glBindVertexArray(planeVAO);
             glBindTexture(GL_TEXTURE_2D, floorTexture);
+            model = glm::mat4(1.0f);
             cubeShader.setMat4("model", glm::mat4(1.0f));
             cubeShader.setVec3("cameraPos", camera.Position);
             glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
+            // 小行星
+            modelShader.use();
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, 0.0f, -20.0f));
+            // model = glm::scale(model, glm::vec3(0.1, 0.1, 0.1));
+            modelShader.setMat4("model", model);
+            planet.Draw(modelShader);
+
+            // 小行星带
+            InstancingShader.use();
+            InstancingShader.setInt("texture_diffuse1", 0);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, planet.textures_loaded[0].id);
+            // 绘制小行星
+            for (unsigned int i = 0; i < planet.meshes.size(); i++)
+            {
+                glBindVertexArray(planet.meshes[i].VAO);
+                glDrawElementsInstanced(GL_TRIANGLES, planet.meshes[i].indices.size(), GL_UNSIGNED_INT, &planet.meshes[i].indices[0], planet_num);
+                glBindVertexArray(0);
+            }
+
+
+            /* 
             // 人物模型
             // pass1 : 绘制本体
             modelShader.use();
@@ -637,25 +746,23 @@ int main(int argc, char* argv[])
             ShowNormalShader.setMat4("projection", projection);
             ShowNormalShader.setMat4("model", model);
             human.Draw(ShowNormalShader);
-
+            */
 
 
             // 反射立方体
+
             ReflectionShader.use();
             glActiveTexture(GL_TEXTURE0);
             glBindVertexArray(reflectioncubeVAO);
             glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
-           // // 旋转
             model = glm::mat4(1.0f);
-           // //currentAngle += rotateSpeed;
-           //// model = glm::rotate(model, glm::radians(currentAngle), glm::vec3(0.0, 0.0, 1.0));
             model = glm::translate(model, glm::vec3(2.0f, 0.5f, 0.0f));
             ReflectionShader.setMat4("model", model);
             ReflectionShader.setVec3("cameraPos", camera.Position);
             glDrawArrays(GL_TRIANGLES, 0, 36);
 
             
-
+            
             
             // 折射
             RefractionShader.use();
@@ -678,48 +785,48 @@ int main(int argc, char* argv[])
 
         #pragma region 立方体及其描边
 
-            // STEP : 1  :  pass1，绘制本体
-            DrawOutline(outlineShader, 1, scale);
+            //// STEP : 1  :  pass1，绘制本体
+            //DrawOutline(outlineShader, 1, scale);
 
-            // cubes
-            cubeShader.use();
-            glBindVertexArray(cubeVAO);
-            glBindTexture(GL_TEXTURE_2D, cubeTexture);
-            // cube1
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
-            cubeShader.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-            // cube2
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-            cubeShader.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            //// cubes
+            //cubeShader.use();
+            //glBindVertexArray(cubeVAO);
+            //glBindTexture(GL_TEXTURE_2D, cubeTexture);
+            //// cube1
+            //model = glm::mat4(1.0f);
+            //model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
+            //cubeShader.setMat4("model", model);
+            //glDrawArrays(GL_TRIANGLES, 0, 36);
+            //// cube2
+            //model = glm::mat4(1.0f);
+            //model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+            //cubeShader.setMat4("model", model);
+            //glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
-            // STEP : 2  :  pass2，扩张描边
-            DrawOutline(outlineShader, 2, scale, 1.1);
-            // cubes
-            glBindVertexArray(cubeVAO);
-            // cube1
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
-            model = glm::scale(model, glm::vec3(scale, scale, scale));
-            outlineShader.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-            // cube2
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-            model = glm::scale(model, glm::vec3(scale, scale, scale));
-            outlineShader.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            //// STEP : 2  :  pass2，扩张描边
+            //DrawOutline(outlineShader, 2, scale, 1.1);
+            //// cubes
+            //glBindVertexArray(cubeVAO);
+            //// cube1
+            //model = glm::mat4(1.0f);
+            //model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
+            //model = glm::scale(model, glm::vec3(scale, scale, scale));
+            //outlineShader.setMat4("model", model);
+            //glDrawArrays(GL_TRIANGLES, 0, 36);
+            //// cube2
+            //model = glm::mat4(1.0f);
+            //model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+            //model = glm::scale(model, glm::vec3(scale, scale, scale));
+            //outlineShader.setMat4("model", model);
+            //glDrawArrays(GL_TRIANGLES, 0, 36);
+
+            // STEP : 3  :  恢复状态，绘制天空盒与其他物体
+            DrawOutline(outlineShader, 3, scale);
 
         #pragma endregion
 
         #pragma region 天空盒
-
-            // STEP : 3  :  恢复状态，绘制天空盒与其他物体
-            DrawOutline(outlineShader, 3, scale);
 
             // 天空球在透明物体前面
             glDepthFunc(GL_LEQUAL);
@@ -839,18 +946,6 @@ int main(int argc, char* argv[])
 #pragma endregion
             */
             
-
-
-            /* 
-            // 使用shader绘制模型
-            modelShader.use();
-            model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
-            modelShader.setMat4("model", model);
-            modelShader.setMat4("view", view);
-            modelShader.setMat4("projection", projection);
-            nanosuitModel.Draw(modelShader);
-            */
-
             
             // 交换缓冲并查询IO事件
             glfwSwapBuffers(window);
@@ -866,14 +961,14 @@ int main(int argc, char* argv[])
     //nanosuitModel.Release();
     #pragma region Release
 
-        glDeleteVertexArrays(1, &cubeVAO);
+        /*glDeleteVertexArrays(1, &cubeVAO);
         glDeleteVertexArrays(1, &planeVAO);
         glDeleteBuffers(1, &cubeVBO);
         glDeleteBuffers(1, &planeVBO);
         glDeleteBuffers(1, &grassVAO);
         glDeleteBuffers(1, &grassVBO);
         glDeleteBuffers(1, &screenVAO);
-        glDeleteBuffers(1, &screenVBO);
+        glDeleteBuffers(1, &screenVBO);*/
         //human.Release();
 
     #pragma endregion
@@ -1085,7 +1180,7 @@ unsigned int LoadCubeTexture(vector<string> textures_faces)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-    std::cout << "Load Cube Texture SUCCESS! " << " ,ID=" << textureID << std::endl;
+    std::cout << "Load CubeTexture SUCCESS! " << " ,ID=" << textureID << std::endl;
     return textureID;
 }
 
