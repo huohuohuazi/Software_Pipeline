@@ -187,7 +187,8 @@ int main(int argc, char* argv[])
         Shader ReflectionShader("Shaders/DebugShader/ReflectEnvironment.vert", "Shaders/DebugShader/ReflectEnvironment.frag");
         Shader RefractionShader("Shaders/DebugShader/ReflectEnvironment.vert", "Shaders/DebugShader/RefractionEnvironment.frag");
         // 三个参数的构造函数，最后一个是几何着色器路径
-        Shader PointsShader("Shaders/DebugShader/Geometry/GeometryTest.vert", "Shaders/DebugShader/Geometry/GeometryTest.frag","Shaders/DebugShader/Geometry/GeometryTest.geo");
+        //Shader PointsShader("Shaders/DebugShader/Geometry/GeometryTest.vert", "Shaders/DebugShader/Geometry/GeometryTest.frag","Shaders/DebugShader/Geometry/GeometryTest.geo");
+        Shader ShowNormalShader("Shaders/DebugShader/Model/ShowNormal.vert", "Shaders/DebugShader/Model/ShowNormal.frag","Shaders/DebugShader/Model/ShowNormal.geo");
 
 
         // 天空球
@@ -250,7 +251,7 @@ int main(int argc, char* argv[])
 
     #pragma region 模型信息
         
-        Model human("resources/objects/nanosuit/nanosuit.obj");
+           Model human("resources/objects/nanosuit/nanosuit.obj");
 
            // 天空球
            float skyboxVertices[] = {
@@ -491,11 +492,11 @@ int main(int argc, char* argv[])
          screen.BindVAO(screenVAO);
          screen.addVertex(4, std::vector<int>{2, 2});// Pos*2 Texcoord*2
 
-         VBOmanager points(&poiontsVBO);
-         points.addStaticBuffer(pointVertices, sizeof(pointVertices));
-         points.addVAO(&poiontsVAO);
-         points.BindVAO(poiontsVAO);
-         points.addVertex(6, std::vector<int>{2,3,1});// Pos*2 Color*3
+         //VBOmanager points(&poiontsVBO);
+         //points.addStaticBuffer(pointVertices, sizeof(pointVertices));
+         //points.addVAO(&poiontsVAO);
+         //points.BindVAO(poiontsVAO);
+         //points.addVertex(6, std::vector<int>{2,3,1});// Pos*2 Color*3
 
 
     #pragma endregion
@@ -549,6 +550,7 @@ int main(int argc, char* argv[])
         std::cout << "BeginToLoop:" << endl;
         //float currentAngle = 0.0f;
         //float rotateSpeed = 0.01f;
+        int frame = 0;
 
         while (!glfwWindowShouldClose(window))
         {
@@ -559,7 +561,10 @@ int main(int argc, char* argv[])
             float currentFrame = glfwGetTime();
             deltaTime = currentFrame - lastFrame;
             lastFrame = currentFrame;
-            cout << "\rFPS: " << 1 / deltaTime << std::flush;
+
+            frame++;
+            if (frame % 10 == 0) cout << "\rFPS: " << 1 / deltaTime << std::flush;
+            if (frame % 60 == 0) frame = 1;
 
             // 输入
             processInput(window);
@@ -594,27 +599,9 @@ int main(int argc, char* argv[])
 
             glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-
-            outlineShader.use();
-            outlineShader.setMat4("view", view);
-            outlineShader.setMat4("projection", projection);
-
-            //cubeShader.use();
-            //cubeShader.setMat4("view", view);
-            //cubeShader.setMat4("projection", projection);
-
-            AlphaShader.use();
-            AlphaShader.setMat4("view", view);
-            AlphaShader.setMat4("projection", projection);
-
-
-            /*ReflectionShader.use();
-            ReflectionShader.setMat4("view", view);
-            ReflectionShader.setMat4("projection", projection);
-
-            RefractionShader.use();
-            RefractionShader.setMat4("view", view);
-            RefractionShader.setMat4("projection", projection);*/
+            ShowNormalShader.use();
+            ShowNormalShader.setMat4("view", view);
+            ShowNormalShader.setMat4("projection", projection);
 
             // Skybox的投影矩阵单独算
 
@@ -637,6 +624,7 @@ int main(int argc, char* argv[])
 
 
             // 人物模型
+            // pass1 : 绘制本体
             modelShader.use();
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0f));
@@ -644,20 +632,29 @@ int main(int argc, char* argv[])
             modelShader.setMat4("model", model);
             human.Draw(modelShader);
 
+            // pass2 ： 绘制法线
+            ShowNormalShader.use();
+            ShowNormalShader.setMat4("projection", projection);
+            ShowNormalShader.setMat4("model", model);
+            human.Draw(ShowNormalShader);
+
+
+
             // 反射立方体
             ReflectionShader.use();
             glActiveTexture(GL_TEXTURE0);
             glBindVertexArray(reflectioncubeVAO);
             glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
-
+           // // 旋转
             model = glm::mat4(1.0f);
-            //currentAngle += rotateSpeed;
-           // model = glm::rotate(model, glm::radians(currentAngle), glm::vec3(0.0, 0.0, 1.0));
-            
+           // //currentAngle += rotateSpeed;
+           //// model = glm::rotate(model, glm::radians(currentAngle), glm::vec3(0.0, 0.0, 1.0));
             model = glm::translate(model, glm::vec3(2.0f, 0.5f, 0.0f));
             ReflectionShader.setMat4("model", model);
             ReflectionShader.setVec3("cameraPos", camera.Position);
             glDrawArrays(GL_TRIANGLES, 0, 36);
+
+            
 
             
             // 折射
@@ -671,10 +668,10 @@ int main(int argc, char* argv[])
             glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
-            // 四个点
-            PointsShader.use();
-            glBindVertexArray(poiontsVAO);
-            glDrawArrays(GL_POINTS, 0, 4);
+            //// 四个点
+            //PointsShader.use();
+            //glBindVertexArray(poiontsVAO);
+            //glDrawArrays(GL_POINTS, 0, 4);
 
 
         #pragma endregion
@@ -877,7 +874,7 @@ int main(int argc, char* argv[])
         glDeleteBuffers(1, &grassVBO);
         glDeleteBuffers(1, &screenVAO);
         glDeleteBuffers(1, &screenVBO);
-        human.Release();
+        //human.Release();
 
     #pragma endregion
 

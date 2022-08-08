@@ -5,8 +5,11 @@ layout (location = 1) in vec2 aTexCoords;
 out vec2 TexCoords;
 
 uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
+layout (std140,binding = 1) uniform VPmatrix
+{
+	mat4 view;
+	mat4 projection;
+};
 
 void main()
 {

@@ -66,7 +66,7 @@ private:
 
         Assimp::Importer importer;
         // 调用Importer的方法
-        const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate| aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+        const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
         // aiProcess_Triangulate:所有的图元形状强制变换为三角形。aiProcess_FlipUVs：自动反转UV的y轴，和opengl对应
         // aiProcess_SplitLargeMeshes/aiProcess_OptimizeMeshes：分割/整合网格，适应最大网格数/减少drawcall的需求
 
@@ -156,16 +156,16 @@ private:
                 vertex.TexCoords = vec;
 
                 
-                // tangent
-                vector.x = aimesh->mTangents[i].x;
-                vector.y = aimesh->mTangents[i].y;
-                vector.z = aimesh->mTangents[i].z;
-                vertex.Tangent = vector;
-                // bitangent
-                vector.x = aimesh->mBitangents[i].x;
-                vector.y = aimesh->mBitangents[i].y;
-                vector.z = aimesh->mBitangents[i].z;
-                vertex.Bitangent = vector;
+                //// tangent
+                //vector.x = aimesh->mTangents[i].x;
+                //vector.y = aimesh->mTangents[i].y;
+                //vector.z = aimesh->mTangents[i].z;
+                //vertex.Tangent = vector;
+                //// bitangent
+                //vector.x = aimesh->mBitangents[i].x;
+                //vector.y = aimesh->mBitangents[i].y;
+                //vector.z = aimesh->mBitangents[i].z;
+                //vertex.Bitangent = vector;
                 
             }
             else

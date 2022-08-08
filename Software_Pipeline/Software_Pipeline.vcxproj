@@ -193,6 +193,9 @@
     <None Include="Shaders\DebugShader\Geometry\GeometryTest.vert" />
     <None Include="Shaders\DebugShader\Model\BaseModel.frag" />
     <None Include="Shaders\DebugShader\Model\BaseModel.vert" />
+    <None Include="Shaders\DebugShader\Model\ShowNormal.frag" />
+    <None Include="Shaders\DebugShader\Model\ShowNormal.geo" />
+    <None Include="Shaders\DebugShader\Model\ShowNormal.vert" />
     <None Include="Shaders\DebugShader\PostProcess.frag" />
     <None Include="Shaders\DebugShader\PostProcess.vert" />
     <None Include="Shaders\DebugShader\ReflectEnvironment.frag" />

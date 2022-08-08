@@ -21,9 +21,9 @@ struct Vertex {
     // 可以有多个uv映射关系，这里只放了一个
     // TexCoords是映射关系，不是纹理
 
-    glm::vec3 Tangent;
+    //glm::vec3 Tangent;
     // bitangent
-     glm::vec3 Bitangent;
+     //glm::vec3 Bitangent;
 
     //int m_BoneIDs[MAX_BONE_INFLUENCE];// 影响顶点的骨骼ID
     //float m_Weights[MAX_BONE_INFLUENCE];// 骨骼权重
@@ -98,14 +98,14 @@ private:
 
         /*--------------------------------------------------------------------------------------------*/
 
-        glEnableVertexAttribArray(3);
-        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
+        //glEnableVertexAttribArray(3);
+        //glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
 
         /*--------------------------------------------------------------------------------------------*/
 
         // vertex bitangent
-        glEnableVertexAttribArray(4);
-        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
+        //glEnableVertexAttribArray(4);
+        //glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
 
         /*--------------------------------------------------------------------------------------------*/
 
