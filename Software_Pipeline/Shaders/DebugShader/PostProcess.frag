@@ -1,6 +1,12 @@
 #version 330 core
 out vec4 FragColor;
+
 in vec2 TexCoords;
+in Texcoords_Stuct
+{
+    vec2 TexCoords;
+} texcoords_in;
+
 
 uniform sampler2D screenTexture;
 
@@ -11,8 +17,11 @@ vec3 Conv(float kernel[9]);
 
 void main()
 { 
+    // 获取当前坐标：
+    // if(gl_FragCoord.x<720)
+    // 可以用于技术演示等，将画面分成两部分，同样可以用于其他着色器的测试
 
-    FragColor = texture(screenTexture, TexCoords);
+    FragColor = texture(screenTexture, texcoords_in.TexCoords);
     
     // FragColor=vec4(Blur(),1.0);
 }

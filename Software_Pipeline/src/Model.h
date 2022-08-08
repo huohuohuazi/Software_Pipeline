@@ -77,7 +77,7 @@ private:
             return;
         }
         // 模型存放的文件目录
-        directory = path.substr(0, path.find_last_of('\\'));
+        directory = path.substr(0, path.find_last_of('/'));
         std::cout << "Read Model File Success： "<< directory << endl;
 
         loadDefaultTexture();
@@ -257,31 +257,12 @@ private:
     
 }
     
-
+    /*
     // 将assimp的材质转化为mesh格式。一次操作同种类型的材质贴图
     vector<Texture> loadMaterialTextures(aiMaterial* aimat, aiTextureType type, string typeName)
     {
         vector<Texture> textures;
-  
-        /* 
-        // 遍历所有纹理
-        for (unsigned int i = 0; i < aimat->GetTextureCount(type); i++)
-        {
-            aiString str;
-            aimat->GetTexture(type, i, &str);
-
-            cout << "String:" << str.C_Str() << endl;
-
-            // 保存纹理信息
-            Texture texture;
-            texture.id = TextureFromFile(str.C_Str(), directory);
-            texture.type = typeName;
-            texture.path = str;
-            textures.push_back(texture);
-        }
-       // return textures;
-         */   
-        
+   
         // std::cout << "Nunber of Property:: " << aimat->mNumProperties << endl;
         // cout << aimat->mProperties[0]->mKey.C_Str() << aimat->mProperties[1]->mKey.C_Str() << endl;
         //std::cout << "Type : " << type <<" Num:" << aimat->GetTextureCount(type) << endl;
@@ -327,7 +308,7 @@ private:
         return textures;
 
     }
-
+    */
     // 新方法？
     bool processMaterial(const aiMaterial* matPtr, const aiScene* sceneObjPtr,const aiTextureType textureType, std::vector<Texture>& textures)
     {
@@ -361,7 +342,8 @@ private:
             {
                 //GLuint textId = TextureHelper::load2DTexture(absolutePath.c_str());
 
-                text.id = TextureFromFile(absolutePath.c_str(), directory);
+                //text.id = TextureFromFile(absolutePath.c_str(), directory);
+                text.id = TextureFromFile(textPath.C_Str(), directory);
                 text.path = absolutePath;
                 text.type = textureType;
                 textures.push_back(text);

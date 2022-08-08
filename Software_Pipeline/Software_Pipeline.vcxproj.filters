@@ -91,5 +91,10 @@
     <None Include="Shaders\DebugShader\ReflectEnvironment.vert" />
     <None Include="Shaders\DebugShader\ReflectEnvironment.frag" />
     <None Include="Shaders\DebugShader\RefractionEnvironment.frag" />
+    <None Include="Shaders\DebugShader\Geometry\GeometryTest.geo" />
+    <None Include="Shaders\DebugShader\Geometry\GeometryTest.vert" />
+    <None Include="Shaders\DebugShader\Geometry\GeometryTest.frag" />
+    <None Include="Shaders\DebugShader\Model\BaseModel.vert" />
+    <None Include="Shaders\DebugShader\Model\BaseModel.frag" />
   </ItemGroup>
 </Project>

@@ -1,5 +1,6 @@
 #version 330 core
 
+// ²¼¾ÖÐÞÊÎ·û
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 
@@ -7,8 +8,14 @@ out vec3 Normal;
 out vec3 Position;
 
 uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
+
+// size=16*4 + 16*4 = 128
+layout (std140,binding = 1) uniform VPmatrix
+{
+	mat4 view;
+	mat4 projection;
+};
+
 
 
 void main()

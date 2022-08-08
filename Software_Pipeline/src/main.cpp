@@ -96,6 +96,7 @@ int main(int argc, char* argv[])
         glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);// 窗口大小改变回调函数
         glfwSetCursorPosCallback(window, mouse_callback);// 鼠标移动回调函数
         glfwSetScrollCallback(window, scroll_callback);// 鼠标滚轮回调函数
+
         // 隐藏光标
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -160,6 +161,8 @@ int main(int argc, char* argv[])
 
     #pragma region 面剔除 CULL
 
+        // 不剔除了，地板有点问题() 其他模型没有问题
+
         //glEnable(GL_CULL_FACE);
         //glCullFace(GL_FRONT);
         //glCullFace(GL_BACK);
@@ -183,6 +186,8 @@ int main(int argc, char* argv[])
         Shader AlphaShader("Shaders/DebugShader/AlphaTest.vert", "Shaders/DebugShader/AlphaTest.frag");
         Shader ReflectionShader("Shaders/DebugShader/ReflectEnvironment.vert", "Shaders/DebugShader/ReflectEnvironment.frag");
         Shader RefractionShader("Shaders/DebugShader/ReflectEnvironment.vert", "Shaders/DebugShader/RefractionEnvironment.frag");
+        // 三个参数的构造函数，最后一个是几何着色器路径
+        Shader PointsShader("Shaders/DebugShader/Geometry/GeometryTest.vert", "Shaders/DebugShader/Geometry/GeometryTest.frag","Shaders/DebugShader/Geometry/GeometryTest.geo");
 
 
         // 天空球
@@ -191,14 +196,62 @@ int main(int argc, char* argv[])
         // 我觉得还是叫后处理合适一些
         Shader PostShader("Shaders/DebugShader/PostProcess.vert", "Shaders/DebugShader/PostProcess.frag");
 
-        //Shader modelShader("Shaders/simpleModel.vert", "Shaders/simpleModel.frag");
+        Shader modelShader("Shaders/DebugShader/Model/BaseModel.vert", "Shaders/DebugShader/Model/BaseModel.frag");
+
+    #pragma endregion
+
+    #pragma region 加载纹理
+
+        unsigned int cubeTexture = LoadTexture("resources/textures/cube.jpg");
+        unsigned int floorTexture = LoadTexture("resources/textures/floor.jpg");
+        //unsigned int grassTexture = LoadTexture("resources/textures/grass.png");
+        unsigned int windowTexture = LoadTexture("resources/textures/window.png");
+
+        vector<std::string> skyboxPath
+        {
+            "resources/textures/skybox/right.jpg",
+            "resources/textures/skybox/left.jpg",
+            "resources/textures/skybox/top.jpg",
+            "resources/textures/skybox/bottom.jpg",
+            "resources/textures/skybox/front.jpg",
+            "resources/textures/skybox/back.jpg"
+        };
+
+        unsigned int skyboxTexture = LoadCubeTexture(skyboxPath);
+
+   #pragma endregion
+
+    #pragma region 设置为Shader中的纹理指定索引
+
+        // cubeShader.setInt("material.diffuse", 0);
+        // cubeShader.setInt("material.specular", 1);
+        cubeShader.use();
+        cubeShader.setInt("texture1", 0);
+
+        AlphaShader.use();
+        AlphaShader.setInt("texture1", 0);
+
+        // PostShader.use();
+        // PostShader.setInt("screenTexture", 0);
+
+        SkyboxShader.use();
+        SkyboxShader.setInt("skybox", 0);
+
+        ReflectionShader.use();
+        ReflectionShader.setInt("skybox", 0);
+
+        RefractionShader.use();
+        RefractionShader.setInt("skybox", 0);
 
     #pragma endregion
 
 
 
+
     #pragma region 模型信息
         
+        Model human("resources/objects/nanosuit/nanosuit.obj");
+
            // 天空球
            float skyboxVertices[] = {
             // positions          
@@ -380,9 +433,17 @@ int main(int argc, char* argv[])
                 1.0f,  1.0f,  1.0f, 1.0f
            };
    
+            
+           // 四个点
+         
+           float pointVertices[] = {
+    -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,1.0f, // 左上
+     0.5f,  0.5f, 0.0f, 1.0f, 0.0f,1.0f, // 右上
+     0.5f, -0.5f, 0.0f, 0.0f, 1.0f,1.0f, // 右下
+    -0.5f, -0.5f, 1.0f, 1.0f, 0.0f,1.0f  // 左下
+           };
+
     #pragma endregion
-
-
 
     #pragma region VBO
 
@@ -392,7 +453,7 @@ int main(int argc, char* argv[])
          unsigned int planeVBO, planeVAO;
          unsigned int grassVBO, grassVAO;
          unsigned int screenVBO, screenVAO;
-         
+         unsigned int poiontsVBO, poiontsVAO;
 
          VBOmanager skybox(&skyboxVBO);
          skybox.addStaticBuffer(skyboxVertices, sizeof(skyboxVertices));
@@ -430,9 +491,27 @@ int main(int argc, char* argv[])
          screen.BindVAO(screenVAO);
          screen.addVertex(4, std::vector<int>{2, 2});// Pos*2 Texcoord*2
 
+         VBOmanager points(&poiontsVBO);
+         points.addStaticBuffer(pointVertices, sizeof(pointVertices));
+         points.addVAO(&poiontsVAO);
+         points.BindVAO(poiontsVAO);
+         points.addVertex(6, std::vector<int>{2,3,1});// Pos*2 Color*3
+
+
     #pragma endregion
 
+    #pragma region Unifrom块
+         
+         unsigned int VPMatricxBlock;
+         glGenBuffers(1, &VPMatricxBlock);
+         glBindBuffer(GL_UNIFORM_BUFFER, VPMatricxBlock);
+         glBufferData(GL_UNIFORM_BUFFER, 128, NULL, GL_STATIC_DRAW); // 分配152字节的内存
+         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
+         // 链接到绑定点1
+         glBindBufferBase(GL_UNIFORM_BUFFER, 1, VPMatricxBlock);
+
+    #pragma endregion
 
     #pragma region FBO
 
@@ -463,56 +542,13 @@ int main(int argc, char* argv[])
     #pragma endregion
 
 
-    #pragma region 加载纹理
 
-         unsigned int cubeTexture = LoadTexture("resources/textures/cube.jpg");
-         unsigned int floorTexture = LoadTexture("resources/textures/floor.jpg");
-         //unsigned int grassTexture = LoadTexture("resources/textures/grass.png");
-         unsigned int windowTexture = LoadTexture("resources/textures/window.png");
-
-         vector<std::string> skyboxPath
-         {
-             "resources/textures/skybox/right.jpg",
-             "resources/textures/skybox/left.jpg",
-             "resources/textures/skybox/top.jpg",
-             "resources/textures/skybox/bottom.jpg",
-             "resources/textures/skybox/front.jpg",
-             "resources/textures/skybox/back.jpg"
-         };
-
-         unsigned int skyboxTexture = LoadCubeTexture(skyboxPath);
-
-    #pragma endregion
-
-    #pragma region 设置为Shader中的纹理指定索引
-         
-         // cubeShader.setInt("material.diffuse", 0);
-         // cubeShader.setInt("material.specular", 1);
-         cubeShader.use();
-         cubeShader.setInt("texture1", 0);
-
-         AlphaShader.use();
-         AlphaShader.setInt("texture1", 0);
-
-         // PostShader.use();
-         // PostShader.setInt("screenTexture", 0);
-
-         SkyboxShader.use();
-         SkyboxShader.setInt("skybox", 0);
-
-         ReflectionShader.use();
-         ReflectionShader.setInt("skybox", 0);
-
-         RefractionShader.use();
-         RefractionShader.setInt("skybox", 0);
-
-    #pragma endregion
-
-        
 
     #pragma region 绘制循环
 
         std::cout << "BeginToLoop:" << endl;
+        //float currentAngle = 0.0f;
+        //float rotateSpeed = 0.01f;
 
         while (!glfwWindowShouldClose(window))
         {
@@ -541,6 +577,8 @@ int main(int argc, char* argv[])
 
         #pragma endregion
 
+
+
         #pragma region VP矩阵
 
             // MVP矩阵，M是transform变换
@@ -548,31 +586,39 @@ int main(int argc, char* argv[])
             glm::mat4 view = camera.GetView();
             glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)1280 / (float)720, 0.1f, 100.0f);
 
+            // 用Uniform缓存区代替重复setMat4
+            glBindBuffer(GL_UNIFORM_BUFFER, VPMatricxBlock);
+            
+            glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, &view);
+            glBufferSubData(GL_UNIFORM_BUFFER, 64, 64, &projection);
+
+            glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+
             outlineShader.use();
             outlineShader.setMat4("view", view);
             outlineShader.setMat4("projection", projection);
 
-            cubeShader.use();
-            cubeShader.setMat4("view", view);
-            cubeShader.setMat4("projection", projection);
+            //cubeShader.use();
+            //cubeShader.setMat4("view", view);
+            //cubeShader.setMat4("projection", projection);
 
             AlphaShader.use();
             AlphaShader.setMat4("view", view);
             AlphaShader.setMat4("projection", projection);
 
-            ReflectionShader.use();
+
+            /*ReflectionShader.use();
             ReflectionShader.setMat4("view", view);
             ReflectionShader.setMat4("projection", projection);
 
             RefractionShader.use();
             RefractionShader.setMat4("view", view);
-            RefractionShader.setMat4("projection", projection);
+            RefractionShader.setMat4("projection", projection);*/
 
             // Skybox的投影矩阵单独算
 
         #pragma endregion
-
-
 
         #pragma region 场景中的一般物体
 
@@ -581,7 +627,7 @@ int main(int argc, char* argv[])
             // STEP : 0 : 画别的
             DrawOutline(outlineShader, 0, scale);
 
-            // floor
+            // 地板
             cubeShader.use();
             glBindVertexArray(planeVAO);
             glBindTexture(GL_TEXTURE_2D, floorTexture);
@@ -590,19 +636,31 @@ int main(int argc, char* argv[])
             glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
-            // ReflectionCube
+            // 人物模型
+            modelShader.use();
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0f));
+            model = glm::scale(model, glm::vec3(0.1, 0.1, 0.1));
+            modelShader.setMat4("model", model);
+            human.Draw(modelShader);
+
+            // 反射立方体
             ReflectionShader.use();
             glActiveTexture(GL_TEXTURE0);
             glBindVertexArray(reflectioncubeVAO);
             glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+
             model = glm::mat4(1.0f);
+            //currentAngle += rotateSpeed;
+           // model = glm::rotate(model, glm::radians(currentAngle), glm::vec3(0.0, 0.0, 1.0));
+            
             model = glm::translate(model, glm::vec3(2.0f, 0.5f, 0.0f));
             ReflectionShader.setMat4("model", model);
             ReflectionShader.setVec3("cameraPos", camera.Position);
             glDrawArrays(GL_TRIANGLES, 0, 36);
 
             
-            // RefractionCube
+            // 折射
             RefractionShader.use();
             glBindVertexArray(reflectioncubeVAO);
             glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
@@ -611,6 +669,12 @@ int main(int argc, char* argv[])
             RefractionShader.setMat4("model", model);
             RefractionShader.setVec3("cameraPos", camera.Position);
             glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+            // 四个点
+            PointsShader.use();
+            glBindVertexArray(poiontsVAO);
+            glDrawArrays(GL_POINTS, 0, 4);
 
 
         #pragma endregion
@@ -640,8 +704,6 @@ int main(int argc, char* argv[])
             DrawOutline(outlineShader, 2, scale, 1.1);
             // cubes
             glBindVertexArray(cubeVAO);
-            //glActiveTexture(GL_TEXTURE0);
-            //glBindTexture(GL_TEXTURE_2D, cubeTexture);
             // cube1
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
@@ -815,6 +877,7 @@ int main(int argc, char* argv[])
         glDeleteBuffers(1, &grassVBO);
         glDeleteBuffers(1, &screenVAO);
         glDeleteBuffers(1, &screenVBO);
+        human.Release();
 
     #pragma endregion
 
