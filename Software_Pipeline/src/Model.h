@@ -295,14 +295,21 @@ public:
     vector<Mesh> meshes;// 一个模型有多个Mesh
     vector<Texture> textures_loaded;// 已加载的纹理，在重复加载时可以直接取用
 
+    int VertNum;
+    int FaceNum;
+
 
     // 构造函数，加载模型
     Model(const char* path)
     {
-        loadModel(path);
+        VertNum = 0;
+        FaceNum = 0;
+        loadModel(path);   
     }
     Model(char* path)
     {
+        VertNum = 0;
+        FaceNum = 0;
         loadModel(path);
     }
 

@@ -56,8 +56,20 @@
     float deltaTime = 0.0f; // 当前帧与上一帧的时间差
     float lastFrame = 0.0f; // 上一帧的时间
 
+    // 键盘变量
     bool firstMouse = true;
-    int pressTime = 0;
+    bool _TabPressed = false;
+    bool _0Pressed = false;
+    bool _1Pressed = false;
+    bool _2Pressed = false;
+    bool _3Pressed = false;
+    bool _4Pressed = false;
+    bool _5Pressed = false;
+
+
+    // 一些全局控制
+    bool On_Skybox = true;
+    bool On_OtherObject = false;
 
     Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
@@ -183,11 +195,12 @@ int main(int argc, char* argv[])
 
     #pragma region 抗锯齿
 
-        bool MSAA = true;
+        bool MSAA = false;
         if (MSAA)
         {
             // 开启多重采样
             glfwWindowHint(GLFW_SAMPLES, 4);//GLFW会自动创建一个每像素4个子采样点的深度和样本缓冲
+            // 顶点着色器会进行四次采样，平均命中的采样点与未命中的，片元着色器则只计算一次中间的点
             glEnable(GL_MULTISAMPLE);
             glEnable(GL_DEPTH_TEST);
 
@@ -266,7 +279,11 @@ int main(int argc, char* argv[])
 
         // 模型（无光照）
         Shader modelShader("Shaders/DebugShader/Model/BaseModel.vert", "Shaders/DebugShader/Model/BaseModel.frag");
-        Shader InstancingShader("Shaders/DebugShader/InstancingTest.vert", "Shaders/DebugShader/InstancingTest.frag");
+        // Shader InstancingShader("Shaders/DebugShader/InstancingTest.vert", "Shaders/DebugShader/InstancingTest.frag");
+
+        // 光照模型
+        Shader BlingPhongShader("Shaders/Lighting/Bling_Phong.vert", "Shaders/Lighting/Bling_Phong.frag");
+
 
 
     #pragma endregion
@@ -321,7 +338,7 @@ int main(int argc, char* argv[])
     #pragma region 模型信息
         
            // Model human("resources/objects/nanosuit/nanosuit.obj");
-           // Model ball("resources/objects/cube.obj");
+           Model ball("resources/objects/cube.obj");
            // Model planet("resources/objects/planet/planet.obj");
         
            // 天空球
@@ -571,6 +588,7 @@ int main(int argc, char* argv[])
 
     #pragma endregion
 
+    // Instancing
     /* 
     #pragma region Instancing
 
@@ -660,8 +678,6 @@ int main(int argc, char* argv[])
     #pragma region 绘制循环
 
         std::cout << "BeginToLoop:" << endl;
-        //float currentAngle = 0.0f;
-        //float rotateSpeed = 0.01f;
         int frame = 0;
 
         while (!glfwWindowShouldClose(window))
@@ -675,8 +691,8 @@ int main(int argc, char* argv[])
             lastFrame = currentFrame;
 
             frame++;
-            if (frame % 100 == 0) cout << "\rFPS: " << 1 / deltaTime << std::flush;
-            if (frame % 60 == 0) frame = 1;
+            if (frame % 400 == 0) cout << "\rFPS: " << 1 / deltaTime << std::flush;
+            if (frame % 400 == 0) frame = 1;
 
             // 输入
             processInput(window);
@@ -736,161 +752,179 @@ int main(int argc, char* argv[])
             glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
-            // 大星球
-            /*modelShader.use();
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, -20.0f));
-            modelShader.setMat4("model", model);
-            planet.Draw(modelShader);*/
-
-            // Instancing小行星带
-            /*InstancingShader.use();
-            InstancingShader.setInt("texture_diffuse1", 0);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, planet.textures_loaded[0].id);
-
-            // 用Instanced方法绘制
-            for (unsigned int i = 0; i < planet.meshes.size(); i++)
+            if (On_OtherObject)
             {
-                glBindVertexArray(planet.meshes[i].VAO);
-                glDrawElementsInstanced(GL_TRIANGLES, planet.meshes[i].indices.size(), GL_UNSIGNED_INT, &planet.meshes[i].indices[0], planet_num);
-                glBindVertexArray(0);
-            }*/
+                // 大星球
+               /*modelShader.use();
+               model = glm::mat4(1.0f);
+               model = glm::translate(model, glm::vec3(0.0f, 0.0f, -20.0f));
+               modelShader.setMat4("model", model);
+               planet.Draw(modelShader);*/
+
+               // Instancing小行星带
+               /*InstancingShader.use();
+               InstancingShader.setInt("texture_diffuse1", 0);
+               glActiveTexture(GL_TEXTURE0);
+               glBindTexture(GL_TEXTURE_2D, planet.textures_loaded[0].id);
+
+           // 用Instanced方法绘制
+           for (unsigned int i = 0; i < planet.meshes.size(); i++)
+           {
+               glBindVertexArray(planet.meshes[i].VAO);
+               glDrawElementsInstanced(GL_TRIANGLES, planet.meshes[i].indices.size(), GL_UNSIGNED_INT, &planet.meshes[i].indices[0], planet_num);
+               glBindVertexArray(0);
+           }*/
 
 
-            // 人物模型
-            /* 
-            // pass1 : 绘制本体
-            modelShader.use();
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0f));
-            model = glm::scale(model, glm::vec3(0.1, 0.1, 0.1));
-            modelShader.setMat4("model", model);
-            human.Draw(modelShader);
+               // 人物模型
+               /*
+               // pass1 : 绘制本体
+               modelShader.use();
+               model = glm::mat4(1.0f);
+               model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0f));
+               model = glm::scale(model, glm::vec3(0.1, 0.1, 0.1));
+               modelShader.setMat4("model", model);
+               human.Draw(modelShader);
 
-            // pass2 ： 绘制法线
-            ShowNormalShader.use();
-            ShowNormalShader.setMat4("projection", projection);
-            ShowNormalShader.setMat4("model", model);
-            human.Draw(ShowNormalShader);
-            */
+               // pass2 ： 绘制法线
+               ShowNormalShader.use();
+               ShowNormalShader.setMat4("projection", projection);
+               ShowNormalShader.setMat4("model", model);
+               human.Draw(ShowNormalShader);
+               */
 
 
-            // 反射立方体
-            ReflectionShader.use();
-            glActiveTexture(GL_TEXTURE0);
-            glBindVertexArray(reflectioncubeVAO);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(2.0f, 0.5f, 0.0f));
-            ReflectionShader.setMat4("model", model);
-            ReflectionShader.setVec3("cameraPos", camera.Position);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+                // 反射立方体
+                ReflectionShader.use();
+                glActiveTexture(GL_TEXTURE0);
+                glBindVertexArray(reflectioncubeVAO);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(2.0f, 0.5f, 0.0f));
+                ReflectionShader.setMat4("model", model);
+                ReflectionShader.setVec3("cameraPos", camera.Position);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
 
-             
-            // 折射
-            RefractionShader.use();
-            glBindVertexArray(reflectioncubeVAO);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(4.0f, 0.5f, 0.0f));
-            RefractionShader.setMat4("model", model);
-            RefractionShader.setVec3("cameraPos", camera.Position);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+
+                // 折射
+                RefractionShader.use();
+                glBindVertexArray(reflectioncubeVAO);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(4.0f, 0.5f, 0.0f));
+                RefractionShader.setMat4("model", model);
+                RefractionShader.setVec3("cameraPos", camera.Position);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+            }
+
+           
 
 
         #pragma endregion
 
         #pragma region 立方体及其描边
 
-            // STEP : 1  :  pass1，绘制本体
-            DrawOutline(outlineShader, 1, scale);
+            if (On_OtherObject)
+            {
+                // STEP : 1  :  pass1，绘制本体
+                DrawOutline(outlineShader, 1, scale);
 
-            // cubes
-            cubeShader.use();
-            glBindVertexArray(cubeVAO);
-            glBindTexture(GL_TEXTURE_2D, cubeTexture);
-            // cube1
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
-            cubeShader.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-            // cube2
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-            cubeShader.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+                // cubes
+                cubeShader.use();
+                glBindVertexArray(cubeVAO);
+                glBindTexture(GL_TEXTURE_2D, cubeTexture);
+                // cube1
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
+                cubeShader.setMat4("model", model);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                // cube2
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+                cubeShader.setMat4("model", model);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
-            // STEP : 2  :  pass2，扩张描边
-            DrawOutline(outlineShader, 2, scale, 1.1);
-            // cubes
-            glBindVertexArray(cubeVAO);
-            // cube1
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
-            model = glm::scale(model, glm::vec3(scale, scale, scale));
-            outlineShader.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-            // cube2
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-            model = glm::scale(model, glm::vec3(scale, scale, scale));
-            outlineShader.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+                // STEP : 2  :  pass2，扩张描边
+                DrawOutline(outlineShader, 2, scale, 1.1);
+                // cubes
+                glBindVertexArray(cubeVAO);
+                // cube1
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
+                model = glm::scale(model, glm::vec3(scale, scale, scale));
+                outlineShader.setMat4("model", model);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                // cube2
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+                model = glm::scale(model, glm::vec3(scale, scale, scale));
+                outlineShader.setMat4("model", model);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
 
-            // STEP : 3  :  恢复状态，绘制天空盒与其他物体
-            DrawOutline(outlineShader, 3, scale);
+                // STEP : 3  :  恢复状态，绘制天空盒与其他物体
+                DrawOutline(outlineShader, 3, scale);
+            }
+
+            
 
         #pragma endregion
 
         #pragma region 天空盒
 
-            // 天空球在透明物体前面
-            glDepthFunc(GL_LEQUAL);
-            SkyboxShader.use();
-            glBindVertexArray(skyboxVAO);
-            //glActiveTexture(GL_TEXTURE0);
-            // 让w分量恒为1
-            view = glm::mat4(glm::mat3(camera.GetView())); // remove translation from the view matrix
-            SkyboxShader.setMat4("view", view);
-            SkyboxShader.setMat4("projection", projection);
+            if (On_Skybox)
+            {
+                // 天空球在透明物体前面
+                glDepthFunc(GL_LEQUAL);
+                SkyboxShader.use();
+                glBindVertexArray(skyboxVAO);
+                //glActiveTexture(GL_TEXTURE0);
+                // 让w分量恒为1
+                view = glm::mat4(glm::mat3(camera.GetView())); // remove translation from the view matrix
+                SkyboxShader.setMat4("view", view);
+                SkyboxShader.setMat4("projection", projection);
 
-            glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-            glBindVertexArray(0);
-            glDepthFunc(GL_LESS);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                glBindVertexArray(0);
+                glDepthFunc(GL_LESS);
+            }
+
+            
 
         #pragma endregion
 
         #pragma region 透明物体
             
-            // windows
-            // 透明物体之前会通过深度测试，因此alpha为0的部分仍然会挡住后面的半透明物体
-            glBindVertexArray(grassVAO);
-            AlphaShader.use();
-            glBindTexture(GL_TEXTURE_2D, windowTexture);
-
-            std::map<float, glm::vec3> sortedAlpha;
-            for (unsigned int i = 0; i < vegetation.size(); i++)
+            if (On_OtherObject)
             {
-                float dis = glm::length(camera.Position - vegetation[i]);
-                sortedAlpha[dis] = vegetation[i];
-                // dis是键，用来索引vegetation[i]
-                // 通过map的迭代器，可以顺序访问透明物体
-            }
+                // windows
+                // 透明物体之前会通过深度测试，因此alpha为0的部分仍然会挡住后面的半透明物体
+                glBindVertexArray(grassVAO);
+                AlphaShader.use();
+                glBindTexture(GL_TEXTURE_2D, windowTexture);
 
-            // 反向迭代器
-            for (std::map<float, glm::vec3>::reverse_iterator iter = sortedAlpha.rbegin(); iter != sortedAlpha.rend(); iter++)
-            {
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, iter->second);
-                // second便是第二个元素
-                AlphaShader.setMat4("model", model);
-                glDrawArrays(GL_TRIANGLES, 0, 6);
-            }
-            glBindVertexArray(0);
+                std::map<float, glm::vec3> sortedAlpha;
+                for (unsigned int i = 0; i < vegetation.size(); i++)
+                {
+                    float dis = glm::length(camera.Position - vegetation[i]);
+                    sortedAlpha[dis] = vegetation[i];
+                    // dis是键，用来索引vegetation[i]
+                    // 通过map的迭代器，可以顺序访问透明物体
+                }
 
+                // 反向迭代器
+                for (std::map<float, glm::vec3>::reverse_iterator iter = sortedAlpha.rbegin(); iter != sortedAlpha.rend(); iter++)
+                {
+                    model = glm::mat4(1.0f);
+                    model = glm::translate(model, iter->second);
+                    // second便是第二个元素
+                    AlphaShader.setMat4("model", model);
+                    glDrawArrays(GL_TRIANGLES, 0, 6);
+                }
+                glBindVertexArray(0);
+            }
+            
         #pragma endregion
 
         
@@ -994,22 +1028,16 @@ int main(int argc, char* argv[])
 // 输出当前信息
 void DisplayCurrentState()
 {
-    if (pressTime==0)
-    {
-        //camera.PrintState();
-        GLint MemoryKb = 0;
-        glGetIntegerv(GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX, &MemoryKb);
-
-        GLint curmemory = 0;
-        glGetIntegerv(GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX, &curmemory);
-
-
-        cout << "总显存：" << MemoryKb / 1024 << "Mb" << " ，可用显存：" << curmemory / 1024 << endl;
-
-        pressTime++;
-    }
     
+    //camera.PrintState();
+    GLint MemoryKb = 0;
+    glGetIntegerv(GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX, &MemoryKb);
 
+    GLint curmemory = 0;
+    glGetIntegerv(GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX, &curmemory);
+
+
+    cout << "总显存：" << MemoryKb / 1024 << "Mb" << " ，可用显存：" << curmemory / 1024 << endl;
 
 }
 
@@ -1083,10 +1111,41 @@ void processInput(GLFWwindow* window)
         camera.ProcessKeyboard(UP, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
         camera.ProcessKeyboard(DOWN, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS)
-        DisplayCurrentState();
-    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE)
-        pressTime = 0;
+
+    // Tab : 打印当前信息
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS){
+        if (!_TabPressed){
+            DisplayCurrentState();
+            _TabPressed = true;
+        }}   
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE) {
+        _TabPressed = false;
+    }
+        
+
+    // 1 : 关闭天空球
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+        if (!_1Pressed) {          
+            On_Skybox = !On_Skybox;
+            _1Pressed = true;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_RELEASE) {
+        _1Pressed = false;
+    }
+
+    // 2 : 不绘制其他物体
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+        if (!_2Pressed) {
+            On_OtherObject = !On_OtherObject;
+            _2Pressed = true;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE) {
+        _2Pressed = false;
+    }
+
+
 }
 
 // 读取图片，返回ID
@@ -1121,7 +1180,7 @@ unsigned int LoadTexture(char const* path)
 
 
         stbi_image_free(data);
-        std::cout << "Load Texture SUCCESS! " << path << " ,ID=" << textureID << std::endl;
+        std::cout << "Load Texture SUCCESS : " << path << " ,ID=" << textureID << std::endl;
     }
     else
     {

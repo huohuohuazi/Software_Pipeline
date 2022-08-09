@@ -66,8 +66,8 @@
     <None Include="Shaders\simpleLight.frag" />
     <None Include="Shaders\simpleColor.vert" />
     <None Include="Shaders\simpleColor.frag" />
-    <None Include="Shaders\Blinn_Phong.vert" />
-    <None Include="Shaders\Blinn_Phong.frag" />
+    <None Include="Shaders\Phong.vert" />
+    <None Include="Shaders\Phong.frag" />
     <None Include="Shaders\simpleMaterial.vert" />
     <None Include="Shaders\simpleMaterial.frag" />
     <None Include="Shaders\simpleTexture.frag" />
@@ -101,5 +101,7 @@
     <None Include="Shaders\DebugShader\Model\ShowNormal.frag" />
     <None Include="Shaders\DebugShader\InstancingTest.vert" />
     <None Include="Shaders\DebugShader\InstancingTest.frag" />
+    <None Include="Shaders\Lighting\Bling_Phong.vert" />
+    <None Include="Shaders\Lighting\Bling_Phong.frag" />
   </ItemGroup>
 </Project>
