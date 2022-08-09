@@ -68,8 +68,11 @@
 
 
     // 一些全局控制
-    bool On_Skybox = true;
-    bool On_OtherObject = false;
+    bool On_Skybox = true;// 是否开启天空球
+    bool On_OtherObject = false;// 是否绘制其他物体
+    bool On_DirectLight = false;// 是否使用平行光源
+    bool On_PointLight = true;// 是否使用点光源
+    bool On_BlinnPhong = true;// 是否使用Blinn_Phong / Phong光照模型
 
     Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
@@ -80,6 +83,126 @@
 #pragma endregion
 
 
+#pragma region 一个点光源
+
+    glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
+    glm::vec3 lightColor(0.3f, 0.3f, 0.3f);
+    float K_ambient = 0.05; //4  32
+
+
+#pragma endregion
+
+
+
+// 键盘输入回调
+void processInput(GLFWwindow* window)
+{
+    // 按ESC退出
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+    {
+        std::cout << "QuitWindow!" << std::endl;
+        glfwSetWindowShouldClose(window, true);
+    }  
+
+    #pragma region 人物移动
+
+        // 相机移动
+        float cameraSpeed = 2.5f * deltaTime; // 移动速度
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            camera.ProcessKeyboard(FORWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            camera.ProcessKeyboard(BACKWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            camera.ProcessKeyboard(LEFT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            camera.ProcessKeyboard(RIGHT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+            camera.ProcessKeyboard(UP, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            camera.ProcessKeyboard(DOWN, deltaTime);
+
+    #pragma endregion
+
+    #pragma region 光源移动
+
+        // 光源移动速度
+        float lightSpeed = 2.5f * deltaTime; // 移动速度
+
+        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+            lightPos += glm::vec3(0.0, 1.0, 0.0) * lightSpeed;
+        if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+            lightPos += glm::vec3(0.0, -1.0, 0.0) * lightSpeed;
+
+#   pragma endregion
+
+
+    #pragma region 渲染开关
+
+        // Tab : 打印当前信息
+        if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
+            if (!_TabPressed) {
+                DisplayCurrentState();
+                _TabPressed = true;
+            }}
+        if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE) _TabPressed = false;
+
+
+        // 1 : 关闭天空球
+        if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+            if (!_1Pressed) {
+                On_Skybox = !On_Skybox;
+                string tmp = On_Skybox ? "On" : "OFF";
+                cout << "Draw SkyBox : " << tmp << endl;
+                _1Pressed = true; 
+            }}
+        if (glfwGetKey(window, GLFW_KEY_1) == GLFW_RELEASE) _1Pressed = false;
+
+
+        // 2 : 不绘制其他物体
+        if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+            if (!_2Pressed) {
+                On_OtherObject = !On_OtherObject;
+                string tmp = On_OtherObject ? "On" : "OFF";
+                cout << "Draw OtherObject : " << tmp << endl;
+                _2Pressed = true; 
+            }}
+        if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE)  _2Pressed = false;
+
+        // 3 : 平行光源
+        if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+            if (!_3Pressed) {
+                On_DirectLight = !On_DirectLight;
+                string tmp = On_DirectLight ? "On" : "OFF";
+                cout << "Use DirectLight : " << tmp << endl;
+                _3Pressed = true; 
+            }}
+        if (glfwGetKey(window, GLFW_KEY_3) == GLFW_RELEASE)  _3Pressed = false;
+
+        // 4 : 点光源
+        if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
+            if (!_4Pressed) {
+                On_PointLight = !On_PointLight;
+                string tmp = On_PointLight ? "On" : "OFF";
+                cout << "Use PointLight : " << tmp << endl;
+                _4Pressed = true;
+            }}
+        if (glfwGetKey(window, GLFW_KEY_4) == GLFW_RELEASE) _4Pressed = false;
+
+        // 5 : Blinn_Phong or Phong ? 
+        if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
+            if (!_5Pressed) {
+                On_BlinnPhong = !On_BlinnPhong;
+                string tmp = On_BlinnPhong ? "Use Blinn_Phong" : "Use Phong";
+                cout << tmp << endl;
+                _5Pressed = true;
+            }
+        }
+        if (glfwGetKey(window, GLFW_KEY_5) == GLFW_RELEASE) _5Pressed = false;
+
+    #pragma endregion
+
+
+}
 
 int main(int argc, char* argv[])
 {
@@ -149,12 +272,12 @@ int main(int argc, char* argv[])
         glEnable(GL_STENCIL_TEST);
 
         // 这个是进行一次模板测试，与设定的掩码进行比较，可以自定义处理的方法
-        glStencilFunc(GL_EQUAL, 1, 0xFF);
+        // glStencilFunc(GL_EQUAL, 1, 0xFF);
         // 1为参考值，即比较的内容
         // 0xFF为掩码，会在用参考值比较前进行与(AND)运算，默认为全1
 
         // 这个是渲染时要进行的掩码
-        //glStencilMask(0xFF);
+        glStencilMask(0xFF);
 
         // 规定缓冲行为
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
@@ -212,17 +335,27 @@ int main(int argc, char* argv[])
 #pragma endregion
 
 
-
     #pragma region Unifrom块
 
+        // VP矩阵
         unsigned int VPMatricxBlock;
         glGenBuffers(1, &VPMatricxBlock);
         glBindBuffer(GL_UNIFORM_BUFFER, VPMatricxBlock);
         glBufferData(GL_UNIFORM_BUFFER, 128, NULL, GL_STATIC_DRAW); // 分配152字节的内存
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
         // 链接到绑定点1
         glBindBufferBase(GL_UNIFORM_BUFFER, 1, VPMatricxBlock);
+
+
+        // 1个点光源
+        unsigned int PointLightinfo;
+        glGenBuffers(1, &PointLightinfo);
+        glBindBuffer(GL_UNIFORM_BUFFER, PointLightinfo);
+        glBufferData(GL_UNIFORM_BUFFER, 52, NULL, GL_STATIC_DRAW); // 分配152字节的内存
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        // 链接到绑定点2
+        glBindBufferBase(GL_UNIFORM_BUFFER, 2, PointLightinfo);
+        //glBindBufferRange(GL_UNIFORM_BUFFER, 2, PointLightinfo,0,40);
 
     #pragma endregion
 
@@ -254,6 +387,8 @@ int main(int argc, char* argv[])
 
     #pragma endregion
 
+    
+    
 
 
 
@@ -309,10 +444,8 @@ int main(int argc, char* argv[])
 
    #pragma endregion
 
-    #pragma region 设置为Shader中的纹理指定索引
+    #pragma region 设置为Shader中的纹理指定纹理单元索引
 
-        // cubeShader.setInt("material.diffuse", 0);
-        // cubeShader.setInt("material.specular", 1);
         cubeShader.use();
         cubeShader.setInt("texture1", 0);
 
@@ -331,6 +464,9 @@ int main(int argc, char* argv[])
         RefractionShader.use();
         RefractionShader.setInt("skybox", 0);
 
+        BlingPhongShader.use();
+        BlingPhongShader.setInt("texture_diffuse1", 0);
+
     #pragma endregion
 
 
@@ -338,7 +474,7 @@ int main(int argc, char* argv[])
     #pragma region 模型信息
         
            // Model human("resources/objects/nanosuit/nanosuit.obj");
-           Model ball("resources/objects/cube.obj");
+           // Model ball("resources/objects/cube.obj");
            // Model planet("resources/objects/planet/planet.obj");
         
            // 天空球
@@ -481,14 +617,14 @@ int main(int argc, char* argv[])
 
            // 地板
            float planeVertices[] = {
-               // positions          // texture Coords (note we set these higher than 1 (together with GL_REPEAT as texture wrapping mode). this will cause the floor texture to repeat)
-                5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
-               -5.0f, -0.5f,  5.0f,  0.0f, 0.0f,
-               -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
+               // positions            // normals         // texcoords
+                10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+               -10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+               -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
 
-                5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
-               -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
-                5.0f, -0.5f, -5.0f,  2.0f, 2.0f
+                10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+               -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+                10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
            };
            
            // （一个）草
@@ -565,7 +701,7 @@ int main(int argc, char* argv[])
          floor.addStaticBuffer(planeVertices, sizeof(planeVertices));
          floor.addVAO(&planeVAO);
          floor.BindVAO(planeVAO);
-         floor.addVertex(5, std::vector<int>{3, 2});// Pos*3 Texcoord*2
+         floor.addVertex(8, std::vector<int>{3,3,2});// Pos*3 Normal*3 Texcoord*2
 
          VBOmanager grass(&grassVBO);
          grass.addStaticBuffer(transparentVertices, sizeof(planeVertices));
@@ -735,20 +871,37 @@ int main(int argc, char* argv[])
 
         #pragma endregion
 
+        #pragma region 光源
+
+            // 用Uniform缓存区代替重复setMat4
+            glBindBuffer(GL_UNIFORM_BUFFER, PointLightinfo);
+            
+            int tmp = (int)On_BlinnPhong;
+            glBufferSubData(GL_UNIFORM_BUFFER, 0, 4, &K_ambient);
+            glBufferSubData(GL_UNIFORM_BUFFER, 16, 16, &lightPos);
+            glBufferSubData(GL_UNIFORM_BUFFER, 32, 16, &lightColor);
+            glBufferSubData(GL_UNIFORM_BUFFER, 48, 4,  &tmp);
+            glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+        #pragma endregion
+
+
         #pragma region 场景中的一般物体
 
             float scale = 1.1f;
 
             // STEP : 0 : 画别的
-            DrawOutline(outlineShader, 0, scale);
+            // DrawOutline(outlineShader, 0, scale);
 
             // 地板
-            cubeShader.use();
+            BlingPhongShader.use();
             glBindVertexArray(planeVAO);
+            //glBindTexture(GL_TEXTURE_2D, cubeTexture);
             glBindTexture(GL_TEXTURE_2D, floorTexture);
+
             model = glm::mat4(1.0f);
-            cubeShader.setMat4("model", glm::mat4(1.0f));
-            cubeShader.setVec3("cameraPos", camera.Position);
+            BlingPhongShader.setMat4("model", glm::mat4(1.0f));
+            BlingPhongShader.setVec3("cameraPos", camera.Position);
             glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
@@ -865,7 +1018,7 @@ int main(int argc, char* argv[])
                 // STEP : 3  :  恢复状态，绘制天空盒与其他物体
                 DrawOutline(outlineShader, 3, scale);
             }
-
+            // DrawOutline(outlineShader, 3, scale);
             
 
         #pragma endregion
@@ -1086,67 +1239,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-// 键盘输入回调
-void processInput(GLFWwindow* window)
-{
-    // 按ESC退出
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-    {
-        std::cout << "QuitWindow!" << std::endl;
-        glfwSetWindowShouldClose(window, true);
-    }
 
-    // 相机移动
-    float cameraSpeed = 2.5f * deltaTime; // 移动速度
-
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-        camera.ProcessKeyboard(UP, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-        camera.ProcessKeyboard(DOWN, deltaTime);
-
-    // Tab : 打印当前信息
-    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS){
-        if (!_TabPressed){
-            DisplayCurrentState();
-            _TabPressed = true;
-        }}   
-    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE) {
-        _TabPressed = false;
-    }
-        
-
-    // 1 : 关闭天空球
-    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
-        if (!_1Pressed) {          
-            On_Skybox = !On_Skybox;
-            _1Pressed = true;
-        }
-    }
-    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_RELEASE) {
-        _1Pressed = false;
-    }
-
-    // 2 : 不绘制其他物体
-    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
-        if (!_2Pressed) {
-            On_OtherObject = !On_OtherObject;
-            _2Pressed = true;
-        }
-    }
-    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE) {
-        _2Pressed = false;
-    }
-
-
-}
 
 // 读取图片，返回ID
 unsigned int LoadTexture(char const* path)
