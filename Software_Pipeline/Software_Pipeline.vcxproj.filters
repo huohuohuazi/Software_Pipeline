@@ -44,6 +44,9 @@
     <ClInclude Include="src\Model.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\Light.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\textures\cat.jpg">
@@ -103,5 +106,13 @@
     <None Include="Shaders\DebugShader\InstancingTest.frag" />
     <None Include="Shaders\Lighting\Bling_Phong.vert" />
     <None Include="Shaders\Lighting\Bling_Phong.frag" />
+    <None Include="Shaders\Lighting\LightBall.vert" />
+    <None Include="Shaders\Lighting\LightBall.frag" />
+    <None Include="Shaders\Shadow\ShadowRenderer.vert" />
+    <None Include="Shaders\Shadow\ShadowRenderer.frag" />
+    <None Include="Shaders\Shadow\ShadowMap.vert" />
+    <None Include="Shaders\Shadow\ShadowMap.frag" />
+    <None Include="Shaders\Lighting\PointLight.vert" />
+    <None Include="Shaders\Lighting\PointLight.frag" />
   </ItemGroup>
 </Project>

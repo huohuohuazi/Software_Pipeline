@@ -166,6 +166,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Camera.h" />
+    <ClInclude Include="src\Light.h" />
     <ClInclude Include="src\Mesh.h" />
     <ClInclude Include="src\Model.h" />
     <ClInclude Include="src\Shader.h" />
@@ -180,6 +181,10 @@
     <Image Include="resources\textures\gongzi.png" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shaders\Lighting\LightBall.frag" />
+    <None Include="Shaders\Lighting\LightBall.vert" />
+    <None Include="Shaders\Lighting\PointLight.frag" />
+    <None Include="Shaders\Lighting\PointLight.vert" />
     <None Include="Shaders\Phong.frag" />
     <None Include="Shaders\Phong.vert" />
     <None Include="Shaders\DebugShader\AlphaTest.frag" />
@@ -211,6 +216,10 @@
     <None Include="Shaders\directionalLight.vert" />
     <None Include="Shaders\Lighting\Bling_Phong.frag" />
     <None Include="Shaders\Lighting\Bling_Phong.vert" />
+    <None Include="Shaders\Shadow\ShadowRenderer.frag" />
+    <None Include="Shaders\Shadow\ShadowRenderer.vert" />
+    <None Include="Shaders\Shadow\ShadowMap.frag" />
+    <None Include="Shaders\Shadow\ShadowMap.vert" />
     <None Include="Shaders\simpleColor.frag" />
     <None Include="Shaders\simpleColor.vert" />
     <None Include="Shaders\simpleLight.frag" />

@@ -51,6 +51,9 @@
 
 #pragma region 变量声明
 
+    const int SHADOW_WIDTH = 1024;
+    const int SHADOW_HEIGHT = 1024;
+
     float lastX = Width / 2, lastY = Height / 2;
 
     float deltaTime = 0.0f; // 当前帧与上一帧的时间差
@@ -65,6 +68,11 @@
     bool _3Pressed = false;
     bool _4Pressed = false;
     bool _5Pressed = false;
+    bool _6Pressed = false;
+    bool _7Pressed = false;
+    bool _8Pressed = false;
+    bool _9Pressed = false;
+
 
 
     // 一些全局控制
@@ -73,22 +81,23 @@
     bool On_DirectLight = false;// 是否使用平行光源
     bool On_PointLight = true;// 是否使用点光源
     bool On_BlinnPhong = true;// 是否使用Blinn_Phong / Phong光照模型
+    bool On_GammaCorrection = true;// 是否开启Gamma矫正
 
-    Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
-
+    
     #define GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX 0x9048
     #define GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX 0x9049
 
 
 #pragma endregion
 
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 #pragma region 一个点光源
 
-    glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
+    //glm::vec3 lightPos(0.0f, 3.0f, 0.0f);
+    glm::vec3 lightPos(-2.0f, 4.0f, -1.0f);
     glm::vec3 lightColor(0.3f, 0.3f, 0.3f);
     float K_ambient = 0.05; //4  32
-
 
 #pragma endregion
 
@@ -198,6 +207,17 @@ void processInput(GLFWwindow* window)
             }
         }
         if (glfwGetKey(window, GLFW_KEY_5) == GLFW_RELEASE) _5Pressed = false;
+
+        // 6 : Gamma矫正
+        if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) {
+            if (!_6Pressed) {
+                On_GammaCorrection = !On_GammaCorrection;
+                string tmp = On_GammaCorrection ? "On"  : "OFF";
+                cout <<"Gamma Correction : "<< tmp << endl;
+                _6Pressed = true;
+            }
+        }
+        if (glfwGetKey(window, GLFW_KEY_6) == GLFW_RELEASE) _6Pressed = false;
 
     #pragma endregion
 
@@ -361,6 +381,7 @@ int main(int argc, char* argv[])
 
     #pragma region FBO
 
+        // 渲染FBO
         // FrameBuffer Object
         unsigned int FBO;
         glGenFramebuffers(1, &FBO);
@@ -385,12 +406,21 @@ int main(int argc, char* argv[])
             std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+
+        // 阴影FBO
+        unsigned depthMapFBO;
+        glGenFramebuffers(1, &depthMapFBO);
+        unsigned int depthMap = CreateEmptyTexture();
+
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO); 
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     #pragma endregion
 
     
-    
-
-
 
 
     #pragma region 加载Shader
@@ -417,6 +447,10 @@ int main(int argc, char* argv[])
         // Shader InstancingShader("Shaders/DebugShader/InstancingTest.vert", "Shaders/DebugShader/InstancingTest.frag");
 
         // 光照模型
+        Shader PointLightShader("Shaders/Lighting/PointLight.vert", "Shaders/Lighting/PointLight.frag");
+        Shader ShadowMapShader("Shaders/Shadow/ShadowMap.vert", "Shaders/Shadow/ShadowMap.frag");
+        Shader ShadowShader("Shaders/Shadow/ShadowRenderer.vert", "Shaders/Shadow/ShadowRenderer.frag");
+        
         Shader BlingPhongShader("Shaders/Lighting/Bling_Phong.vert", "Shaders/Lighting/Bling_Phong.frag");
 
 
@@ -452,15 +486,25 @@ int main(int argc, char* argv[])
         AlphaShader.use();
         AlphaShader.setInt("texture1", 0);
 
-        // PostShader.use();
-        // PostShader.setInt("screenTexture", 0);
+        // 后处理Shader
+        PostShader.use();
+        PostShader.setInt("screenTexture", 0);
 
+        // 阴影Shader
+        ShadowShader.use();
+        ShadowShader.setInt("texture_diffuse1", 0);
+        ShadowShader.setInt("shadowMap", 1);
+        // ShadowMapShadr
+        ShadowMapShader.use();
+        ShadowMapShader.setInt("depthMap", 0);
+
+        // 天空球
         SkyboxShader.use();
         SkyboxShader.setInt("skybox", 0);
 
+        // 反射/折射Shader
         ReflectionShader.use();
         ReflectionShader.setInt("skybox", 0);
-
         RefractionShader.use();
         RefractionShader.setInt("skybox", 0);
 
@@ -474,7 +518,7 @@ int main(int argc, char* argv[])
     #pragma region 模型信息
         
            // Model human("resources/objects/nanosuit/nanosuit.obj");
-           // Model ball("resources/objects/cube.obj");
+           Model ball("resources/objects/ball.obj");
            // Model planet("resources/objects/planet/planet.obj");
         
            // 天空球
@@ -618,13 +662,13 @@ int main(int argc, char* argv[])
            // 地板
            float planeVertices[] = {
                // positions            // normals         // texcoords
-                10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-               -10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-               -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+               25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+        -25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+        -25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
 
-                10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-               -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
-                10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
+         25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+        -25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+         25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
            };
            
            // （一个）草
@@ -833,41 +877,18 @@ int main(int argc, char* argv[])
             // 输入
             processInput(window);
 
+            // 是否开启gamma矫正
+            // 移至后处理阶段
+            /*if (On_GammaCorrection) {
+                glEnable(GL_FRAMEBUFFER_SRGB);
+            }else{
+                glDisable(GL_FRAMEBUFFER_SRGB);
+            }*/
 
-            // 渲染
-            // 清除 颜色缓冲 与 深度缓冲 与 模板缓冲
-            // 指定帧缓冲对象
-            glBindFramebuffer(GL_FRAMEBUFFER, FBO);
             glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-
-            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            glEnable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-        #pragma endregion
-
-
-
-        #pragma region VP矩阵
-
-            // MVP矩阵，M是transform变换
-            glm::mat4 model = glm::mat4(1.0f);
-            glm::mat4 view = camera.GetView();
-            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)1280 / (float)720, 0.1f, 100.0f);
-
-            // 用Uniform缓存区代替重复setMat4
-            glBindBuffer(GL_UNIFORM_BUFFER, VPMatricxBlock);
-            
-            glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, &view);
-            glBufferSubData(GL_UNIFORM_BUFFER, 64, 64, &projection);
-
-            glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-            /*ShowNormalShader.use();
-            ShowNormalShader.setMat4("view", view);
-            ShowNormalShader.setMat4("projection", projection);*/
-
-            // Skybox的投影矩阵单独算
+            // glClear( GL_DEPTH_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);
 
         #pragma endregion
 
@@ -875,16 +896,117 @@ int main(int argc, char* argv[])
 
             // 用Uniform缓存区代替重复setMat4
             glBindBuffer(GL_UNIFORM_BUFFER, PointLightinfo);
-            
+
             int tmp = (int)On_BlinnPhong;
             glBufferSubData(GL_UNIFORM_BUFFER, 0, 4, &K_ambient);
             glBufferSubData(GL_UNIFORM_BUFFER, 16, 16, &lightPos);
             glBufferSubData(GL_UNIFORM_BUFFER, 32, 16, &lightColor);
-            glBufferSubData(GL_UNIFORM_BUFFER, 48, 4,  &tmp);
+            glBufferSubData(GL_UNIFORM_BUFFER, 48, 4, &tmp);
+
             glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
         #pragma endregion
 
+
+        // 阴影阶段
+        #pragma region 阴影Init
+
+            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+            
+            float near_plane = 1.0f, far_plane = 7.5f;
+            glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+            glm::vec3 Front(0, -1, 1);
+            glm::vec3 Right = glm::normalize(glm::cross(Front, glm::vec3(0,1,0)));
+            glm::vec3 Up = glm::normalize(glm::cross(Right, Front));
+            glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+            glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+            
+        #pragma endregion
+
+        #pragma region Pass1 : 深度采样depth map
+            
+            // 绑定深度FBO
+            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+
+            glClear(GL_DEPTH_BUFFER_BIT);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, floorTexture);
+
+            // 传递MVP矩阵       
+            ShadowMapShader.use();
+            ShadowMapShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+            glm::mat4 model = glm::mat4(0.1f);
+            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+            model = glm::scale(model, glm::vec3(0.1));
+            ShadowMapShader.setMat4("model", model);
+            glBindVertexArray(cubeVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        #pragma endregion
+
+        #pragma region Pass2: Render Shadow
+            
+            //glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+            // glEnable(GL_DEPTH_TEST);
+
+            // 填充Uniform
+
+            #pragma region VP矩阵
+
+            // MVP矩阵，M是transform变换
+            model = glm::mat4(1.0f);
+            glm::mat4 view = camera.GetView();
+            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)1280 / (float)720, 0.1f, 100.0f);
+
+            // 用Uniform缓存区代替重复setMat4
+            glBindBuffer(GL_UNIFORM_BUFFER, VPMatricxBlock);
+
+            glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, &view);
+            glBufferSubData(GL_UNIFORM_BUFFER, 64, 64, &projection);
+
+            glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+            #pragma endregion
+
+
+            // 返回相机空间
+            glViewport(0, 0, Width, Height);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+            // 于地板上绘制
+            ShadowShader.use();
+            model = glm::mat4(1.0f);
+            ShadowShader.setMat4("model", model);
+            ShadowShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+            ShadowShader.setVec3("viewPos", camera.Position);
+            ShadowShader.setVec3("lightPos", lightPos);
+            glBindVertexArray(planeVAO);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, floorTexture);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, depthMap);
+
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        #pragma endregion
+        
+       
+
+        #pragma region 绘制光源
+
+            PointLightShader.use();
+            model = glm::mat4(1.0f);
+            model = glm::scale(model, glm::vec3(0.1));
+            model = glm::translate(model, lightPos);
+            PointLightShader.setMat4("model", model);
+            glBindVertexArray(cubeVAO);
+            glActiveTexture(GL_TEXTURE0);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        #pragma endregion
 
         #pragma region 场景中的一般物体
 
@@ -893,16 +1015,17 @@ int main(int argc, char* argv[])
             // STEP : 0 : 画别的
             // DrawOutline(outlineShader, 0, scale);
 
-            // 地板
-            BlingPhongShader.use();
-            glBindVertexArray(planeVAO);
-            //glBindTexture(GL_TEXTURE_2D, cubeTexture);
-            glBindTexture(GL_TEXTURE_2D, floorTexture);
 
-            model = glm::mat4(1.0f);
-            BlingPhongShader.setMat4("model", glm::mat4(1.0f));
-            BlingPhongShader.setVec3("cameraPos", camera.Position);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
+            // 待投射立方体  
+            cubeShader.use();
+            model=glm::mat4(0.1f);
+            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+            model = glm::scale(model, glm::vec3(0.1));
+
+            cubeShader.setMat4("model", model);
+            glBindVertexArray(cubeVAO);
+            glBindTexture(GL_TEXTURE_2D, cubeTexture);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
             if (On_OtherObject)
@@ -1084,72 +1207,19 @@ int main(int argc, char* argv[])
 
         #pragma region 后处理
         
-            glBindFramebuffer(GL_FRAMEBUFFER, 0); // 解绑上一个FrameBuffer
-            glDisable(GL_DEPTH_TEST);
-            glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
+            //glBindFramebuffer(GL_FRAMEBUFFER, 0); // 解绑上一个FrameBuffer
+            //glDisable(GL_DEPTH_TEST);
+            //glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+            //glClear(GL_COLOR_BUFFER_BIT);
 
-            PostShader.use();
-            glBindVertexArray(screenVAO);
-            glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
+            //PostShader.use();
+            //glBindVertexArray(screenVAO);
+            //glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+            //// 开启gamma矫正
+            //PostShader.setBool("On_GammaCorrection", On_GammaCorrection);
+            //glDrawArrays(GL_TRIANGLES, 0, 6);
 
         #pragma endregion
-
-
-
-            /* 
-#pragma region Lighting
-            cubeShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-            cubeShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
-            cubeShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
-            cubeShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
-            // point light 1
-            cubeShader.setVec3("pointLights[0].position", pointLightPositions[0]);
-            cubeShader.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
-            cubeShader.setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
-            cubeShader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
-            cubeShader.setFloat("pointLights[0].constant", 1.0f);
-            cubeShader.setFloat("pointLights[0].linear", 0.09f);
-            cubeShader.setFloat("pointLights[0].quadratic", 0.032f);
-            // point light 2
-            cubeShader.setVec3("pointLights[1].position", pointLightPositions[1]);
-            cubeShader.setVec3("pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
-            cubeShader.setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
-            cubeShader.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
-            cubeShader.setFloat("pointLights[1].constant", 1.0f);
-            cubeShader.setFloat("pointLights[1].linear", 0.09f);
-            cubeShader.setFloat("pointLights[1].quadratic", 0.032f);
-            // point light 3
-            cubeShader.setVec3("pointLights[2].position", pointLightPositions[2]);
-            cubeShader.setVec3("pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
-            cubeShader.setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
-            cubeShader.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
-            cubeShader.setFloat("pointLights[2].constant", 1.0f);
-            cubeShader.setFloat("pointLights[2].linear", 0.09f);
-            cubeShader.setFloat("pointLights[2].quadratic", 0.032f);
-            // point light 4
-            cubeShader.setVec3("pointLights[3].position", pointLightPositions[3]);
-            cubeShader.setVec3("pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
-            cubeShader.setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
-            cubeShader.setVec3("pointLights[3].specular", 1.0f, 1.0f, 1.0f);
-            cubeShader.setFloat("pointLights[3].constant", 1.0f);
-            cubeShader.setFloat("pointLights[3].linear", 0.09f);
-            cubeShader.setFloat("pointLights[3].quadratic", 0.032f);
-            // spotLight
-            cubeShader.setVec3("spotLight.position", camera.Position);
-            cubeShader.setVec3("spotLight.direction", camera.Front);
-            cubeShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-            cubeShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
-            cubeShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-            cubeShader.setFloat("spotLight.constant", 1.0f);
-            cubeShader.setFloat("spotLight.linear", 0.09f);
-            cubeShader.setFloat("spotLight.quadratic", 0.032f);
-            cubeShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-            cubeShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
-
-#pragma endregion
-            */
             
             
             // 交换缓冲并查询IO事件

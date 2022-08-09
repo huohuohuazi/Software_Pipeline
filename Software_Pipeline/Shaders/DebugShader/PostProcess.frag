@@ -9,6 +9,7 @@ in Texcoords_Stuct
 
 
 uniform sampler2D screenTexture;
+uniform bool On_GammaCorrection;// 是否开启Gamma矫正
 
 vec3 Conv(float kernel[9]);
 //vec4 Grayscale(vec4 color_in);
@@ -22,7 +23,11 @@ void main()
     // 可以用于技术演示等，将画面分成两部分，同样可以用于其他着色器的测试
 
     FragColor = texture(screenTexture, texcoords_in.TexCoords);
-    
+    if(On_GammaCorrection)
+    {
+        float gamma = 2.2;
+        FragColor.rgb = pow(FragColor.rgb, vec3(1.0/gamma));
+    }
     // FragColor=vec4(Blur(),1.0);
 }
 
