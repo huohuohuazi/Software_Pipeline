@@ -216,6 +216,11 @@
     <None Include="Shaders\directionalLight.vert" />
     <None Include="Shaders\Lighting\Bling_Phong.frag" />
     <None Include="Shaders\Lighting\Bling_Phong.vert" />
+    <None Include="Shaders\Shadow\cubeShadowMap.frag" />
+    <None Include="Shaders\Shadow\cubeShadowMap.geo" />
+    <None Include="Shaders\Shadow\cubeShadowMap.vert" />
+    <None Include="Shaders\Shadow\ShadowMapDebug.frag" />
+    <None Include="Shaders\Shadow\ShadowMapDebug.vert" />
     <None Include="Shaders\Shadow\ShadowRenderer.frag" />
     <None Include="Shaders\Shadow\ShadowRenderer.vert" />
     <None Include="Shaders\Shadow\ShadowMap.frag" />

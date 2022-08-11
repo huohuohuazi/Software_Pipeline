@@ -12,12 +12,13 @@
     //#include <GL/glut.h>
     #include <gl/glut.h>
     #include <gl/GL.h>
-    //#include <GLEW/GL/glew.h>
+
 
     #include <GLFW/glfw3.h>
     #include <GLM/glm.hpp>
     #include <GLM/gtc/matrix_transform.hpp>
     #include <GLM/gtc/type_ptr.hpp>
+    
 
     //#define STB_IMAGE_IMPLEMENTATION
 
@@ -44,7 +45,9 @@
     void DrawOutline(Shader ourlineShader, int step, float& scale, float targetScale = 1.1);
     // void DrawOutline(Shader ourlineShader, int step, float& scale);
     unsigned int CreateEmptyTexture();
+    unsigned int CreateDepthFrameTexture();
     unsigned int LoadCubeTexture(vector<string> textures_faces);
+    unsigned int CreateDepthCubeTexture();
 
 #pragma endregion
 
@@ -77,12 +80,12 @@
 
     // 一些全局控制
     bool On_Skybox = true;// 是否开启天空球
-    bool On_OtherObject = false;// 是否绘制其他物体
-    bool On_DirectLight = false;// 是否使用平行光源
-    bool On_PointLight = true;// 是否使用点光源
+    bool On_OtherObject = true;// 是否绘制其他物体
+    
+    
     bool On_BlinnPhong = true;// 是否使用Blinn_Phong / Phong光照模型
-    bool On_GammaCorrection = true;// 是否开启Gamma矫正
-
+    GLboolean On_GammaCorrection = true;// 是否开启Gamma矫正
+    GLboolean shadows = true;// 是否开启阴影
     
     #define GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX 0x9048
     #define GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX 0x9049
@@ -94,10 +97,9 @@ Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 #pragma region 一个点光源
 
-    //glm::vec3 lightPos(0.0f, 3.0f, 0.0f);
     glm::vec3 lightPos(-2.0f, 4.0f, -1.0f);
-    glm::vec3 lightColor(0.3f, 0.3f, 0.3f);
-    float K_ambient = 0.05; //4  32
+    //glm::vec3 lightColor(0.3f, 0.3f, 0.3f);
+    //float K_ambient = 0.05; //4  32
 
 #pragma endregion
 
@@ -137,10 +139,14 @@ void processInput(GLFWwindow* window)
         // 光源移动速度
         float lightSpeed = 2.5f * deltaTime; // 移动速度
 
-        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+        if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
             lightPos += glm::vec3(0.0, 1.0, 0.0) * lightSpeed;
         if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
             lightPos += glm::vec3(0.0, -1.0, 0.0) * lightSpeed;
+        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+            lightPos += glm::vec3(-1.0, 0.0, 0.0) * lightSpeed;
+        if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+            lightPos += glm::vec3(1.0, 0.0, 0.0) * lightSpeed;
 
 #   pragma endregion
 
@@ -180,9 +186,9 @@ void processInput(GLFWwindow* window)
         // 3 : 平行光源
         if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
             if (!_3Pressed) {
-                On_DirectLight = !On_DirectLight;
+                /*On_DirectLight = !On_DirectLight;
                 string tmp = On_DirectLight ? "On" : "OFF";
-                cout << "Use DirectLight : " << tmp << endl;
+                cout << "Use DirectLight : " << tmp << endl;*/
                 _3Pressed = true; 
             }}
         if (glfwGetKey(window, GLFW_KEY_3) == GLFW_RELEASE)  _3Pressed = false;
@@ -190,19 +196,19 @@ void processInput(GLFWwindow* window)
         // 4 : 点光源
         if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
             if (!_4Pressed) {
-                On_PointLight = !On_PointLight;
+                /*On_PointLight = !On_PointLight;
                 string tmp = On_PointLight ? "On" : "OFF";
-                cout << "Use PointLight : " << tmp << endl;
+                cout << "Use PointLight : " << tmp << endl;*/
                 _4Pressed = true;
             }}
         if (glfwGetKey(window, GLFW_KEY_4) == GLFW_RELEASE) _4Pressed = false;
 
-        // 5 : Blinn_Phong or Phong ? 
+        // 5 : 阴影开启？
         if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
             if (!_5Pressed) {
-                On_BlinnPhong = !On_BlinnPhong;
-                string tmp = On_BlinnPhong ? "Use Blinn_Phong" : "Use Phong";
-                cout << tmp << endl;
+                shadows = !shadows;
+                string tmp = shadows ? " ON " : "OFF";
+                cout << "Shadow Render? : " << tmp << endl;
                 _5Pressed = true;
             }
         }
@@ -265,6 +271,8 @@ int main(int argc, char* argv[])
             return -1;
         }
 
+        glViewport(0, 0, Width, Height);
+
         DisplayDeviceInfo();
 
 
@@ -275,7 +283,7 @@ int main(int argc, char* argv[])
         glEnable(GL_DEPTH_TEST);// 若通过深度测试，则再深度缓冲区保存该片段/像素的深度
         // 否则舍弃
 
-        glDepthFunc(GL_LESS);// 设置深度测试的方法
+        //glDepthFunc(GL_LESS);// 设置深度测试的方法
         // GL_LESS	在片段深度值小于缓冲的深度值时通过测试
         // GL_GREATER	在片段深度值大于缓冲区的深度值时通过测试
         // 还有GL_ALWAYS / GL_NEVER / GL_EQUAL / GL_LEQUAL
@@ -297,10 +305,10 @@ int main(int argc, char* argv[])
         // 0xFF为掩码，会在用参考值比较前进行与(AND)运算，默认为全1
 
         // 这个是渲染时要进行的掩码
-        glStencilMask(0xFF);
+       glStencilMask(0xFF);
 
         // 规定缓冲行为
-        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        /*glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);*/
         // glStencilOp(GLenum sfail, GLenum dpfail,  GLenum dppass);
         // sfail：模板测试失败时;dpfail:模板测试通过但深度测试失败； dppass：都通过
         // 包括：GL_KEEP 保持当前的模板值 / GL_ZERO 设为0 / GL_REPLACE 替换为ref /  GL_INCR 模板值加1等等
@@ -311,7 +319,7 @@ int main(int argc, char* argv[])
 
     #pragma region Alpha测试
 
-        glEnable(GL_BLEND);
+       glEnable(GL_BLEND);
 
         // 混合选项
         // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -324,7 +332,9 @@ int main(int argc, char* argv[])
 
         // 不剔除了，地板有点问题() 其他模型没有问题
 
-        //glEnable(GL_CULL_FACE);
+       // glEnable(GL_CULL_FACE);
+       //glCullFace(GL_BACK);
+       // glCullFace(GL_FRONT);
         //glCullFace(GL_FRONT);
         //glCullFace(GL_BACK);
         //glFrontFace(GL_CW);
@@ -367,16 +377,6 @@ int main(int argc, char* argv[])
         glBindBufferBase(GL_UNIFORM_BUFFER, 1, VPMatricxBlock);
 
 
-        // 1个点光源
-        unsigned int PointLightinfo;
-        glGenBuffers(1, &PointLightinfo);
-        glBindBuffer(GL_UNIFORM_BUFFER, PointLightinfo);
-        glBufferData(GL_UNIFORM_BUFFER, 52, NULL, GL_STATIC_DRAW); // 分配152字节的内存
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-        // 链接到绑定点2
-        glBindBufferBase(GL_UNIFORM_BUFFER, 2, PointLightinfo);
-        //glBindBufferRange(GL_UNIFORM_BUFFER, 2, PointLightinfo,0,40);
-
     #pragma endregion
 
     #pragma region FBO
@@ -410,13 +410,24 @@ int main(int argc, char* argv[])
         // 阴影FBO
         unsigned depthMapFBO;
         glGenFramebuffers(1, &depthMapFBO);
-        unsigned int depthMap = CreateEmptyTexture();
-
+        
+        // 单一方向深度采样
+        unsigned int depthMap = CreateDepthFrameTexture();
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO); 
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        
+
+        // 立方体方向深度采样
+        unsigned int depthCubemap = CreateDepthCubeTexture();
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
     #pragma endregion
 
@@ -450,7 +461,9 @@ int main(int argc, char* argv[])
         Shader PointLightShader("Shaders/Lighting/PointLight.vert", "Shaders/Lighting/PointLight.frag");
         Shader ShadowMapShader("Shaders/Shadow/ShadowMap.vert", "Shaders/Shadow/ShadowMap.frag");
         Shader ShadowShader("Shaders/Shadow/ShadowRenderer.vert", "Shaders/Shadow/ShadowRenderer.frag");
-        
+        Shader ShadowMapDebugShader("Shaders/Shadow/ShadowMapDebug.vert", "Shaders/Shadow/ShadowMapDebug.frag");
+
+
         Shader BlingPhongShader("Shaders/Lighting/Bling_Phong.vert", "Shaders/Lighting/Bling_Phong.frag");
 
 
@@ -492,11 +505,15 @@ int main(int argc, char* argv[])
 
         // 阴影Shader
         ShadowShader.use();
-        ShadowShader.setInt("texture_diffuse1", 0);
-        ShadowShader.setInt("shadowMap", 1);
-        // ShadowMapShadr
-        ShadowMapShader.use();
-        ShadowMapShader.setInt("depthMap", 0);
+        //ShadowShader.setInt("diffuseTexture", 0);
+        //ShadowShader.setInt("shadowMap",1);
+        glUniform1i(glGetUniformLocation(ShadowShader.ID, "diffuseTexture"), 0);
+        glUniform1i(glGetUniformLocation(ShadowShader.ID, "shadowMap"), 1);
+
+        ShadowMapDebugShader.use();
+        ShadowMapDebugShader.setInt("depthMap", 0);
+
+        
 
         // 天空球
         SkyboxShader.use();
@@ -518,7 +535,7 @@ int main(int argc, char* argv[])
     #pragma region 模型信息
         
            // Model human("resources/objects/nanosuit/nanosuit.obj");
-           Model ball("resources/objects/ball.obj");
+          // Model ball("resources/objects/ball.obj");
            // Model planet("resources/objects/planet/planet.obj");
         
            // 天空球
@@ -570,48 +587,48 @@ int main(int argc, char* argv[])
            // （一个）方块
            // 更新为按照顺时针方向定义的
            float cubeVertices[] = {
-               // Back face
-               -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // Bottom-left
-                0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
-                0.5f, -0.5f, -0.5f,  1.0f, 0.0f, // bottom-right         
-                0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
-               -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
-               -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
-               // Front face
-               -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
-                0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
-                0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
-                0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
-               -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, // top-left
-               -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
-               // Left face
-               -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
-               -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-left
-               -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
-               -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
-               -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
-               -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
-               // Right face
-                0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
-                0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
-                0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right         
-                0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
-                0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
-                0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left     
-               // Bottom face
-               -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
-                0.5f, -0.5f, -0.5f,  1.0f, 1.0f, // top-left
-                0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
-                0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
-               -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
-               -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
-               // Top face
-               -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
-                0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
-                0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right     
-                0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
-               -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
-               -0.5f,  0.5f,  0.5f,  0.0f, 0.0f  // bottom-left        
+               // back face
+               -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+                1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+                1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, // bottom-right         
+                1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+               -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+               -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, // top-left
+               // front face
+               -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+                1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
+                1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+                1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+               -1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
+               -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+               // left face
+               -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+               -1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-left
+               -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+               -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+               -1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+               -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+               // right face
+                1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+                1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+                1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-right         
+                1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+                1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+                1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-left     
+               // bottom face
+               -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+                1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // top-left
+                1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+                1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+               -1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+               -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+               // top face
+               -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+                1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+                1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top-right     
+                1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+               -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+               -1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left        
            };
 
            //  反射方块
@@ -662,13 +679,13 @@ int main(int argc, char* argv[])
            // 地板
            float planeVertices[] = {
                // positions            // normals         // texcoords
-               25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
-        -25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-        -25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+                25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+               -25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+               -25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
 
-         25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
-        -25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
-         25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
+                25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+               -25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+                25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
            };
            
            // （一个）草
@@ -685,10 +702,10 @@ int main(int argc, char* argv[])
 
            vector<glm::vec3> vegetation;
            vegetation.push_back(glm::vec3(-1.5f, 0.0f, -0.48f));
-           vegetation.push_back(glm::vec3(1.5f, 0.0f, 0.51f));
-           vegetation.push_back(glm::vec3(0.0f, 0.0f, 0.7f));
-           vegetation.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
-           vegetation.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
+           //vegetation.push_back(glm::vec3(1.5f, 0.0f, 0.51f));
+           //vegetation.push_back(glm::vec3(0.0f, 0.0f, 0.7f));
+           //vegetation.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
+           //vegetation.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
 
            // 正方形
            float quadVertices[] = {
@@ -721,7 +738,7 @@ int main(int argc, char* argv[])
          unsigned int planeVBO, planeVAO;
          unsigned int grassVBO, grassVAO;
          unsigned int screenVBO, screenVAO;
-         unsigned int poiontsVBO, poiontsVAO;
+        // unsigned int poiontsVBO, poiontsVAO;
 
          VBOmanager skybox(&skyboxVBO);
          skybox.addStaticBuffer(skyboxVertices, sizeof(skyboxVertices));
@@ -733,7 +750,7 @@ int main(int argc, char* argv[])
          cube.addStaticBuffer(cubeVertices, sizeof(cubeVertices));
          cube.addVAO(&cubeVAO);
          cube.BindVAO(cubeVAO);
-         cube.addVertex(5, std::vector<int>{3, 2});// Pos*3 Texcoord*2
+         cube.addVertex(8, std::vector<int>{3, 3,2});// Pos*3 Texcoord*2
 
          VBOmanager reflectioncube(&reflectioncubeVBO);
          reflectioncube.addStaticBuffer(ReflectionCubeVertices, sizeof(ReflectionCubeVertices));
@@ -748,7 +765,7 @@ int main(int argc, char* argv[])
          floor.addVertex(8, std::vector<int>{3,3,2});// Pos*3 Normal*3 Texcoord*2
 
          VBOmanager grass(&grassVBO);
-         grass.addStaticBuffer(transparentVertices, sizeof(planeVertices));
+         grass.addStaticBuffer(transparentVertices, sizeof(transparentVertices));
          grass.addVAO(&grassVAO);
          grass.BindVAO(grassVAO);
          grass.addVertex(5, std::vector<int>{3, 2});// Pos*3 Texcoord*2
@@ -853,8 +870,10 @@ int main(int argc, char* argv[])
 
     #pragma endregion
         */
+    
 
-
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+           
     #pragma region 绘制循环
 
         std::cout << "BeginToLoop:" << endl;
@@ -886,79 +905,80 @@ int main(int argc, char* argv[])
             }*/
 
             glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-            // glClear( GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         #pragma endregion
-
-        #pragma region 光源
-
-            // 用Uniform缓存区代替重复setMat4
-            glBindBuffer(GL_UNIFORM_BUFFER, PointLightinfo);
-
-            int tmp = (int)On_BlinnPhong;
-            glBufferSubData(GL_UNIFORM_BUFFER, 0, 4, &K_ambient);
-            glBufferSubData(GL_UNIFORM_BUFFER, 16, 16, &lightPos);
-            glBufferSubData(GL_UNIFORM_BUFFER, 32, 16, &lightColor);
-            glBufferSubData(GL_UNIFORM_BUFFER, 48, 4, &tmp);
-
-            glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-        #pragma endregion
-
 
         // 阴影阶段
-        #pragma region 阴影Init
-
-            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        #pragma region 光源VP矩阵
             
-            float near_plane = 1.0f, far_plane = 7.5f;
-            glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-            glm::vec3 Front(0, -1, 1);
+            glm::mat4 lightProjection, lightView;
+            glm::mat4 lightSpaceMatrix;
+
+            float near_plane = 1.0f;
+            float far_plane = 7.5f;
+            //glm::vec3 Front= glm::normalize(glm::vec3(2, -4, 1));
+            glm::vec3 Front = glm::vec3(2, -4, 1);
             glm::vec3 Right = glm::normalize(glm::cross(Front, glm::vec3(0,1,0)));
             glm::vec3 Up = glm::normalize(glm::cross(Right, Front));
-            glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
-            glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-            
+            lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+            //lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));           
+            lightView = glm::lookAt(lightPos, lightPos+Front, Up);
+            lightSpaceMatrix = lightProjection * lightView;       
+
         #pragma endregion
 
-        #pragma region Pass1 : 深度采样depth map
-            
+        #pragma region Pass1 : 从光源处深度采样depth map
+
+            // 开启正面剔除，避免阴影漂浮
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_FRONT);
+
+            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+
             // 绑定深度FBO
             glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-
             glClear(GL_DEPTH_BUFFER_BIT);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, floorTexture);
 
-            // 传递MVP矩阵       
+
             ShadowMapShader.use();
             ShadowMapShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-            glm::mat4 model = glm::mat4(0.1f);
-            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-            model = glm::scale(model, glm::vec3(0.1));
+
+            // floor
+            glm::mat4 model = glm::mat4(1.0f);
+            ShadowMapShader.setMat4("model", model);
+            glBindVertexArray(planeVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+
+            // cubes
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
+            model = glm::scale(model, glm::vec3(0.5f));
             ShadowMapShader.setMat4("model", model);
             glBindVertexArray(cubeVAO);
             glDrawArrays(GL_TRIANGLES, 0, 36);
 
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0));
+            model = glm::scale(model, glm::vec3(0.5f));
+            ShadowMapShader.setMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            
+
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+            glCullFace(GL_BACK);
+            glDisable(GL_CULL_FACE);
 
         #pragma endregion
 
-        #pragma region Pass2: Render Shadow
-            
-            //glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-            // glEnable(GL_DEPTH_TEST);
-
-            // 填充Uniform
-
-            #pragma region VP矩阵
+        #pragma region 相机VP矩阵
 
             // MVP矩阵，M是transform变换
-            model = glm::mat4(1.0f);
             glm::mat4 view = camera.GetView();
-            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)1280 / (float)720, 0.1f, 100.0f);
+            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)Width / (float)Height, 0.1f, 100.0f);
 
             // 用Uniform缓存区代替重复setMat4
             glBindBuffer(GL_UNIFORM_BUFFER, VPMatricxBlock);
@@ -968,27 +988,71 @@ int main(int argc, char* argv[])
 
             glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-            #pragma endregion
+        #pragma endregion
 
-
+           
+        #pragma region Pass2: Render Shadow
+            
             // 返回相机空间
             glViewport(0, 0, Width, Height);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            // 于地板上绘制
             ShadowShader.use();
-            model = glm::mat4(1.0f);
-            ShadowShader.setMat4("model", model);
-            ShadowShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
-            ShadowShader.setVec3("viewPos", camera.Position);
+            ShadowShader.setMat4("projection", projection);
+            ShadowShader.setMat4("view", view);
+
             ShadowShader.setVec3("lightPos", lightPos);
-            glBindVertexArray(planeVAO);
+            ShadowShader.setVec3("viewPos", camera.Position);
+            ShadowShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+            ShadowShader.setBool("shadows", shadows);
+            
+
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, floorTexture);
+            glBindTexture(GL_TEXTURE_2D, cubeTexture);
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, depthMap);
 
+           
+
+            ShadowShader.use();
+            // floor
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, floorTexture);
+            model = glm::mat4(1.0f);
+            ShadowShader.setMat4("model", model);
+            glBindVertexArray(planeVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+            // cubes
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cubeTexture);
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
+            model = glm::scale(model, glm::vec3(0.5f));
+            ShadowShader.setMat4("model", model);
+            glBindVertexArray(cubeVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0));
+            model = glm::scale(model, glm::vec3(0.5f));
+            ShadowShader.setMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+
+            
+            //// ShadowMap Visualization
+            //ShadowMapDebugShader.use();
+            ShadowMapDebugShader.use();
+            ShadowMapDebugShader.setFloat("near_plane", near_plane);
+            ShadowMapDebugShader.setFloat("far_plane", far_plane);
+            model = glm::mat4(1.0f);
+            ShadowMapDebugShader.setMat4("model", model);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, depthMap);
+            glBindVertexArray(grassVAO);
             glDrawArrays(GL_TRIANGLES, 0, 6);
 
         #pragma endregion
@@ -1003,7 +1067,6 @@ int main(int argc, char* argv[])
             model = glm::translate(model, lightPos);
             PointLightShader.setMat4("model", model);
             glBindVertexArray(cubeVAO);
-            glActiveTexture(GL_TEXTURE0);
             glDrawArrays(GL_TRIANGLES, 0, 36);
 
         #pragma endregion
@@ -1014,18 +1077,6 @@ int main(int argc, char* argv[])
 
             // STEP : 0 : 画别的
             // DrawOutline(outlineShader, 0, scale);
-
-
-            // 待投射立方体  
-            cubeShader.use();
-            model=glm::mat4(0.1f);
-            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-            model = glm::scale(model, glm::vec3(0.1));
-
-            cubeShader.setMat4("model", model);
-            glBindVertexArray(cubeVAO);
-            glBindTexture(GL_TEXTURE_2D, cubeTexture);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
             if (On_OtherObject)
@@ -1073,21 +1124,21 @@ int main(int argc, char* argv[])
                 // 反射立方体
                 ReflectionShader.use();
                 glActiveTexture(GL_TEXTURE0);
-                glBindVertexArray(reflectioncubeVAO);
-                glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+                glBindVertexArray(reflectioncubeVAO); 
                 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(2.0f, 0.5f, 0.0f));
+                model = glm::translate(model, glm::vec3(4.0f, 0.0f, 0.0f));
                 ReflectionShader.setMat4("model", model);
                 ReflectionShader.setVec3("cameraPos", camera.Position);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
                 glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
                 // 折射
                 RefractionShader.use();
-                glBindVertexArray(reflectioncubeVAO);
+                glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
                 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(4.0f, 0.5f, 0.0f));
+                model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0f));
                 RefractionShader.setMat4("model", model);
                 RefractionShader.setVec3("cameraPos", camera.Position);
                 glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -1102,44 +1153,44 @@ int main(int argc, char* argv[])
 
             if (On_OtherObject)
             {
-                // STEP : 1  :  pass1，绘制本体
-                DrawOutline(outlineShader, 1, scale);
+            //    // STEP : 1  :  pass1，绘制本体
+            //    DrawOutline(outlineShader, 1, scale);
 
-                // cubes
-                cubeShader.use();
-                glBindVertexArray(cubeVAO);
-                glBindTexture(GL_TEXTURE_2D, cubeTexture);
-                // cube1
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
-                cubeShader.setMat4("model", model);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
-                // cube2
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-                cubeShader.setMat4("model", model);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
+            //    // cubes
+            //    cubeShader.use();
+            //    glBindVertexArray(cubeVAO);
+            //    glBindTexture(GL_TEXTURE_2D, cubeTexture);
+            //    // cube1
+            //    model = glm::mat4(1.0f);
+            //    model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
+            //    cubeShader.setMat4("model", model);
+            //    glDrawArrays(GL_TRIANGLES, 0, 36);
+            //    // cube2
+            //    model = glm::mat4(1.0f);
+            //    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+            //    cubeShader.setMat4("model", model);
+            //    glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
-                // STEP : 2  :  pass2，扩张描边
-                DrawOutline(outlineShader, 2, scale, 1.1);
-                // cubes
-                glBindVertexArray(cubeVAO);
-                // cube1
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
-                model = glm::scale(model, glm::vec3(scale, scale, scale));
-                outlineShader.setMat4("model", model);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
-                // cube2
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-                model = glm::scale(model, glm::vec3(scale, scale, scale));
-                outlineShader.setMat4("model", model);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
+            //    // STEP : 2  :  pass2，扩张描边
+            //    DrawOutline(outlineShader, 2, scale, 1.1);
+            //    // cubes
+            //    glBindVertexArray(cubeVAO);
+            //    // cube1
+            //    model = glm::mat4(1.0f);
+            //    model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
+            //    model = glm::scale(model, glm::vec3(scale, scale, scale));
+            //    outlineShader.setMat4("model", model);
+            //    glDrawArrays(GL_TRIANGLES, 0, 36);
+            //    // cube2
+            //    model = glm::mat4(1.0f);
+            //    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+            //    model = glm::scale(model, glm::vec3(scale, scale, scale));
+            //    outlineShader.setMat4("model", model);
+            //    glDrawArrays(GL_TRIANGLES, 0, 36);
 
-                // STEP : 3  :  恢复状态，绘制天空盒与其他物体
-                DrawOutline(outlineShader, 3, scale);
+            //    // STEP : 3  :  恢复状态，绘制天空盒与其他物体
+            //    DrawOutline(outlineShader, 3, scale);
             }
             // DrawOutline(outlineShader, 3, scale);
             
@@ -1150,12 +1201,12 @@ int main(int argc, char* argv[])
 
             if (On_Skybox)
             {
-                // 天空球在透明物体前面
+               // 天空球在透明物体前面
                 glDepthFunc(GL_LEQUAL);
                 SkyboxShader.use();
                 glBindVertexArray(skyboxVAO);
                 //glActiveTexture(GL_TEXTURE0);
-                // 让w分量恒为1
+               // // 让w分量恒为1
                 view = glm::mat4(glm::mat3(camera.GetView())); // remove translation from the view matrix
                 SkyboxShader.setMat4("view", view);
                 SkyboxShader.setMat4("projection", projection);
@@ -1198,7 +1249,7 @@ int main(int argc, char* argv[])
                     AlphaShader.setMat4("model", model);
                     glDrawArrays(GL_TRIANGLES, 0, 6);
                 }
-                glBindVertexArray(0);
+                //glBindVertexArray(0);
             }
             
         #pragma endregion
@@ -1207,17 +1258,17 @@ int main(int argc, char* argv[])
 
         #pragma region 后处理
         
-            //glBindFramebuffer(GL_FRAMEBUFFER, 0); // 解绑上一个FrameBuffer
-            //glDisable(GL_DEPTH_TEST);
-            //glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
-            //glClear(GL_COLOR_BUFFER_BIT);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0); // 解绑FBO
+            glDisable(GL_DEPTH_TEST);
+            glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
 
-            //PostShader.use();
-            //glBindVertexArray(screenVAO);
-            //glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-            //// 开启gamma矫正
-            //PostShader.setBool("On_GammaCorrection", On_GammaCorrection);
-            //glDrawArrays(GL_TRIANGLES, 0, 6);
+            PostShader.use();
+            glBindVertexArray(screenVAO);
+            glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+            // 开启gamma矫正
+            PostShader.setBool("On_GammaCorrection", On_GammaCorrection);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
 
         #pragma endregion
             
@@ -1353,9 +1404,10 @@ unsigned int LoadTexture(char const* path)
     return textureID;
 }
 
-// 生成一个纹理缓冲对象
+// 生成一个帧缓冲的纹理对象
 unsigned int CreateEmptyTexture()
 {
+
     // 生成纹理
     unsigned int texColorBuffer;
     glGenTextures(1, &texColorBuffer);
@@ -1367,9 +1419,40 @@ unsigned int CreateEmptyTexture()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glBindTexture(GL_TEXTURE_2D, 0);
+    cout << "Generate Frame Texture Success : " << texColorBuffer << endl;
 
     return texColorBuffer;
 }
+
+// 生成一个深度缓冲的纹理对象
+unsigned int CreateDepthFrameTexture()
+{
+
+    // 生成纹理
+    unsigned int texColorBuffer;
+    glGenTextures(1, &texColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+
+    // Texture只分配了Width*Height的内存但没有填充数据
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    GLfloat borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+
+
+
+
+    //glBindTexture(GL_TEXTURE_2D, 0);
+    cout << "Generate Frame Texture Success : " << texColorBuffer << endl;
+
+    return texColorBuffer;
+}
+
 
 // 立方体贴图，传入路径集合
 unsigned int LoadCubeTexture(vector<string> textures_faces)
@@ -1417,6 +1500,27 @@ unsigned int LoadCubeTexture(vector<string> textures_faces)
 }
 
 
+// 空的立方体贴图，用于shadowMap
+unsigned int CreateDepthCubeTexture()
+{
+    unsigned int depthCubemapID;
+    glGenTextures(1, &depthCubemapID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemapID);
+
+    for (GLuint i = 0; i < 6; ++i)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    std::cout << "Load Empty Depth CubeTexture SUCCESS! " << " ,ID=" << depthCubemapID << std::endl;
+    return depthCubemapID;
+}
+
 // 描边
 void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
 {
@@ -1460,6 +1564,3 @@ void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
         //glEnable(GL_DEPTH_TEST);
     }
 }
-
-
-

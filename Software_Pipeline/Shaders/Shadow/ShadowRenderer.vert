@@ -1,32 +1,32 @@
 #version 330 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
-layout (location = 2) in vec2 aTexCoords;
+layout (location = 2) in vec2 aTexcoords;
 
 
-out vert_OUT {
+out VS_OUT {
     vec3 FragPos;
     vec3 Normal;
     vec2 TexCoords;
-    vec4 FragPosLightSpace;// 片段于灯光的透视空间坐标
-} vs_out;
+    vec4 FragPosLightSpace;
+} vert_out;
 
+uniform mat4 projection;
+uniform mat4 view;
 uniform mat4 model;
-// size=16*4 + 16*4 = 128
-layout (std140,binding = 1) uniform VPmatrix
-{
-	mat4 view;
-	mat4 projection;
-};
-uniform mat4 lightSpaceMatrix;// 相机空间VP矩阵
+uniform mat4 lightSpaceMatrix;
 
 void main()
 {
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
+    // 
+    gl_Position = projection * view * model * vec4(aPos, 1.0f);
 
-    vs_out.FragPos =  vec3(model * vec4(aPos, 1.0));// 世界空间坐标
-    vs_out.Normal =  aNormal; 
-    vs_out.TexCoords=aTexCoords;
-    vs_out.FragPosLightSpace = lightSpaceMatrix * vec4(vs_out.FragPos, 1.0);// 灯光的相机空间坐标
-    
+    // 世界坐标
+    vert_out.FragPos = vec3(model * vec4(aPos, 1.0));
+    // 确保法线始终垂直于表面，转置逆转矩阵
+    vert_out.Normal = transpose(inverse(mat3(model))) * aNormal;
+
+    vert_out.TexCoords = aTexcoords;
+    // 于光源投影空间中的坐标（VP光源*M）
+    vert_out.FragPosLightSpace = lightSpaceMatrix * vec4(vert_out.FragPos, 1.0);
 }
