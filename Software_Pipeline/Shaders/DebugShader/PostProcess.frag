@@ -7,6 +7,8 @@ in Texcoords_Stuct
     vec2 TexCoords;
 } texcoords_in;
 
+uniform float exposure;
+uniform bool hdr;
 
 uniform sampler2D screenTexture;
 uniform bool On_GammaCorrection;// 是否开启Gamma矫正
@@ -23,6 +25,10 @@ void main()
     // 可以用于技术演示等，将画面分成两部分，同样可以用于其他着色器的测试
 
     FragColor = texture(screenTexture, texcoords_in.TexCoords);
+
+    // 考虑HDR
+    FragColor.rgb = vec3(1.0) - exp(-FragColor.rgb * exposure);
+
     if(On_GammaCorrection)
     {
         float gamma = 2.2;

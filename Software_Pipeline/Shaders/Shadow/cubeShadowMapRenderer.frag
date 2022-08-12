@@ -16,6 +16,15 @@ uniform vec3 viewPos;
 uniform float far_plane;
 uniform bool shadows;// 是否绘制阴影
 
+vec3 sampleOffsetDirections[20] = vec3[]
+(
+   vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
+   vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+   vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+   vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+   vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+);
+
 float ShadowCalculation(vec3 fragPos)
 {
     // 片元到光源向量
@@ -26,29 +35,43 @@ float ShadowCalculation(vec3 fragPos)
 
 
     // PCF
-    float bias = 0.05; 
-    float shadow = 0.0;//阴影值
-    float samples = 4.0;
-    float offset = 0.1;
+    //float bias = 0.05; 
+   // float shadow = 0.0;//阴影值
+    // float samples = 4.0;
+    //float offset = 0.1;
 
     // 三个维度递增角度
-    for(float x = -offset; x < offset; x += offset / (samples * 0.5))
-    {
-        for(float y = -offset; y < offset; y += offset / (samples * 0.5))
-        {
-            for(float z = -offset; z < offset; z += offset / (samples * 0.5))
-            {
+    //for(float x = -offset; x < offset; x += offset / (samples * 0.5)){
+        ///for(float y = -offset; y < offset; y += offset / (samples * 0.5)){
+            //for(float z = -offset; z < offset; z += offset / (samples * 0.5)){
                 // 用方向向量 采样 立方体深度贴图
-                float closestDepth = texture(depthMap, fragToLight + vec3(x, y, z)).r; 
+                //float closestDepth = texture(depthMap, fragToLight + vec3(x, y, z)).r; 
                 // 由于方向是归一化的，因此要统一
-                closestDepth *= far_plane; 
-                if(currentDepth - bias > closestDepth)
-                    shadow += 1.0;
-            }
-        }
-    }
-    shadow /= (samples * samples * samples);
+                //closestDepth *= far_plane; 
+                //if(currentDepth - bias > closestDepth)
+                    //shadow += 1.0;
+                //} } }
+    //shadow /= (samples * samples * samples);
 
+    // PCF优化：使用20个偏移量代替64次采样
+    float shadow = 0.0;
+    float bias = 0.15;
+    int samples = 20;
+
+    float viewDistance = length(viewPos - fragPos);
+    // 偏移半径
+    // float diskRadius = 0.05;
+    //根据观察者的距离来增加偏移半径了
+    float diskRadius = (1.0 + (viewDistance / far_plane)) / 25.0;
+    for(int i = 0; i < samples; ++i)
+    {
+        float closestDepth = texture(depthMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r;
+        closestDepth *= far_plane; 
+        if(currentDepth - bias > closestDepth)
+            shadow += 1.0;
+    }
+    shadow /= float(samples);
+    
     return shadow;
 }
 

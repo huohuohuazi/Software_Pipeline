@@ -26,6 +26,7 @@
     #include "Model.h"
     #include "Camera.h"
     #include "VBO.h"
+    
     //#include "Texture.h"
     //#include "stb_image.h"
     //#include "src/Texture.h"
@@ -44,7 +45,7 @@
     unsigned int LoadTexture(char const* path);
     void DrawOutline(Shader ourlineShader, int step, float& scale, float targetScale = 1.1);
     // void DrawOutline(Shader ourlineShader, int step, float& scale);
-    unsigned int CreateEmptyTexture();
+    unsigned int CreateEmptyTexture(bool HDR);
     unsigned int CreateDepthFrameTexture();
     unsigned int LoadCubeTexture(vector<string> textures_faces);
     unsigned int CreateDepthCubeTexture();
@@ -86,7 +87,9 @@
     bool On_BlinnPhong = true;// 是否使用Blinn_Phong / Phong光照模型
     GLboolean On_GammaCorrection = true;// 是否开启Gamma矫正
     GLboolean shadows = true;// 是否开启阴影
-    
+    bool HDR = true;// 是否使用HDR缓冲纹理
+
+
     #define GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX 0x9048
     #define GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX 0x9049
 
@@ -382,31 +385,33 @@ int main(int argc, char* argv[])
     #pragma region FBO
 
         
-        // 渲染FBO
-        // FrameBuffer Object
+        // FBO
+        // FrameBufferBuffer Object 帧缓冲对象
         unsigned int FBO;
         glGenFramebuffers(1, &FBO);
         glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-        unsigned int texColorBuffer = CreateEmptyTexture();
 
-        // 讲Texture绑定到FBO上,Texture是16位的
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
+        // CBO
+        // ColorBuffer Obect 颜色缓冲对象
+        unsigned int CBO = CreateEmptyTexture(HDR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, CBO, 0);
 
-        // RenderBuffer Object渲染缓冲对象
-        unsigned int RBO;
+        // RBO
+        // RenderBuffer Object 渲染缓冲对象 包括深度与模板缓冲对象
+        GLuint RBO;
         glGenRenderbuffers(1, &RBO);
         glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-
         // 内部格式为GL_DEPTH24_STENCIL8，Depth是24位的,Stencil是8位的
+        // glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, Width, Height);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, Width, Height);
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
-
+        
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
             std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
+
+
 
         // 阴影FBO
         unsigned DepthMapFBO;
@@ -428,28 +433,6 @@ int main(int argc, char* argv[])
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        //GLuint depthMapFBO;
-        //glGenFramebuffers(1, &depthMapFBO);
-        //// Create depth cubemap texture
-        //GLuint depthCubemap;
-        //glGenTextures(1, &depthCubemap);
-        //glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
-        //for (GLuint i = 0; i < 6; ++i)
-        //    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-        //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-        //// Attach cubemap as depth map FBO's color buffer
-        //glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-        //glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
-        //glDrawBuffer(GL_NONE);
-        //glReadBuffer(GL_NONE);
-        //if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        //    std::cout << "Framebuffer not complete!" << std::endl;
-        //glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     #pragma endregion
 
@@ -1040,9 +1023,9 @@ int main(int argc, char* argv[])
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             
-          //glm::mat4 model = glm::mat4(1.0f);
-           glCullFace(GL_BACK);
-           glDisable(GL_CULL_FACE);
+           //glm::mat4 model = glm::mat4(1.0f);
+            glCullFace(GL_BACK);
+            glDisable(GL_CULL_FACE);
             
         #pragma endregion
 
@@ -1116,33 +1099,39 @@ int main(int argc, char* argv[])
             cubeShadowShader.setMat4("model", model);
             glBindVertexArray(cubeVAO);
             glDrawArrays(GL_TRIANGLES, 0, 36);
+    
 
-            
-            //// ShadowMap Visualization
-            //ShadowMapDebugShader.use();
-            /*ShadowMapDebugShader.use();
-            ShadowMapDebugShader.setFloat("near_plane", near_plane);
-            ShadowMapDebugShader.setFloat("far_plane", far_plane);
-            model = glm::mat4(1.0f);
-            ShadowMapDebugShader.setMat4("model", model);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, depthMap);
-            glBindVertexArray(grassVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 6);*/
+            #pragma region ShadowDebug
 
-            cubeShadowMapDebugShader.use();
-            glm::vec3 Ball_center(4, 0, 0);
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, Ball_center);
-            model = glm::scale(model, glm::vec3(0.2));
-            cubeShadowMapDebugShader.setMat4("model", model);
-            cubeShadowMapDebugShader.setVec3("center", Ball_center);
-            cubeShadowMapDebugShader.setFloat("near_plane", near_plane);
-            cubeShadowMapDebugShader.setFloat("far_plane", far_plane);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, DepthMapFBO);
-            ball.Draw(cubeShadowMapDebugShader);
-            // glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+                //// ShadowMap Visualization
+                //ShadowMapDebugShader.use();
+                /*ShadowMapDebugShader.use();
+                ShadowMapDebugShader.setFloat("near_plane", near_plane);
+                ShadowMapDebugShader.setFloat("far_plane", far_plane);
+                model = glm::mat4(1.0f);
+                ShadowMapDebugShader.setMat4("model", model);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, depthMap);
+                glBindVertexArray(grassVAO);
+                glDrawArrays(GL_TRIANGLES, 0, 6);*/
+
+                /*
+                cubeShadowMapDebugShader.use();
+                glm::vec3 Ball_center(4, 0, 0);
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, Ball_center);
+                model = glm::scale(model, glm::vec3(0.2));
+                cubeShadowMapDebugShader.setMat4("model", model);
+                cubeShadowMapDebugShader.setVec3("center", Ball_center);
+                cubeShadowMapDebugShader.setFloat("near_plane", near_plane);
+                cubeShadowMapDebugShader.setFloat("far_plane", far_plane);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, DepthMapFBO);
+                ball.Draw(cubeShadowMapDebugShader);
+                // glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+                */
+
+            #pragma endregion
 
 
         #pragma endregion
@@ -1350,7 +1339,6 @@ int main(int argc, char* argv[])
 
         #pragma region 后处理
         
-            
             glBindFramebuffer(GL_FRAMEBUFFER, 0); // 解绑FBO
             glDisable(GL_DEPTH_TEST);
             glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
@@ -1358,9 +1346,12 @@ int main(int argc, char* argv[])
 
             PostShader.use();
             glBindVertexArray(screenVAO);
-            glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+            glBindTexture(GL_TEXTURE_2D, CBO);
+            float exposure = 1.0;// 曝光参数
             // 开启gamma矫正
             PostShader.setBool("On_GammaCorrection", On_GammaCorrection);
+            PostShader.setFloat("exposure", exposure);
+            PostShader.setBool("hdr", HDR);
             glDrawArrays(GL_TRIANGLES, 0, 6);
             
         #pragma endregion
@@ -1392,10 +1383,188 @@ int main(int argc, char* argv[])
 }
 
 
+// 加载图片至显存
+unsigned int LoadTexture(char const* path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+
+    unsigned char* data= stbi_load(path, &width, &height, &nrComponents, 0);
+    
+        if (data)
+        {
+            GLenum format = GL_RGB;
+
+            if (nrComponents == 1)// 灰度图
+                format = GL_RED;
+            else if (nrComponents == 3)// RGB图
+                format = GL_RGB;
+            else if (nrComponents == 4)// RGBA图
+                format = GL_RGBA;
+
+            glBindTexture(GL_TEXTURE_2D, textureID);
+
+            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+
+
+            glGenerateMipmap(GL_TEXTURE_2D);// 生成mipmap
+
+            // 纹理Repeat的bug，当为透明材质时，边缘处理仍然为进行插值，导致有半透明框，因此要改变repeart策略
+           
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+
+            
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+            stbi_image_free(data);
+            std::cout << "Load Texture SUCCESS : " << path << " , channels = "<< nrComponents <<" ,ID=" << textureID << std::endl;
+        }
+        else
+        {
+            std::cout << "Load Texture Failed! " << path << std::endl;
+            stbi_image_free(data);
+        }
+        return textureID;
+    //}
+
+    
+}
+
+// 加载立方体贴图
+unsigned int LoadCubeTexture(vector<string> textures_faces)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    unsigned char* data;
+    for (unsigned int i = 0; i < textures_faces.size(); i++)
+    {
+        data = stbi_load(textures_faces[i].c_str(), &width, &height, &nrChannels, 0);
+
+        if (data)
+        {
+            GLenum format = GL_RGB;
+            if (nrChannels == 1)// 灰度图
+                format = GL_RED;
+            else if (nrChannels == 3)// RGB图
+                format = GL_RGB;
+            else if (nrChannels == 4)// RGBA图
+                format = GL_RGBA;
+
+           /* if (HDR){
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, data);
+            }
+            else {*/
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+            // }
+            
+
+            stbi_image_free(data);
+        }
+        else
+        {
+            std::cout << "Load single piece of Cube Texture FAILED! " << textures_faces[i] << std::endl;
+            stbi_image_free(data);
+        }
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    std::cout << "Load CubeTexture SUCCESS! " << " ,ID=" << textureID << std::endl;
+    return textureID;
+}
+
+
+// 帧缓冲对象FBO Width * Height
+unsigned int CreateEmptyTexture(bool HDR)
+{
+
+    // 生成纹理
+    unsigned int texColorBuffer;
+    glGenTextures(1, &texColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+
+    // Texture只分配了Width*Height的内存但没有填充数据
+    if (HDR) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Width, Height, 0, GL_RGB, GL_FLOAT, NULL);
+    }
+    else {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    }
+    
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    cout << "Generate Frame Texture Success : " << texColorBuffer << endl;
+
+    return texColorBuffer;
+}
+
+// 深度缓冲对象 SHADOW_WIDTH * SHADOW_HEIGHT
+unsigned int CreateDepthFrameTexture()
+{
+
+    // 生成纹理
+    unsigned int texColorBuffer;
+    glGenTextures(1, &texColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+
+    // Texture只分配了Width*Height的内存但没有填充数据
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    GLfloat borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    cout << "Generate Frame Texture Success : " << texColorBuffer << endl;
+
+    return texColorBuffer;
+}
+
+// 立方体深度缓冲对象 6 * SHADOW_WIDTH * SHADOW_HEIGHT
+unsigned int CreateDepthCubeTexture()
+{
+    unsigned int depthCubemapID;
+    glGenTextures(1, &depthCubemapID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemapID);
+
+    for (unsigned i = 0; i < 6; ++i)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    std::cout << "Load Empty Depth CubeTexture SUCCESS! " << " ,ID=" << depthCubemapID << std::endl;
+    return depthCubemapID;
+}
+
+
+
 // 输出当前信息
 void DisplayCurrentState()
 {
-    
+
     //camera.PrintState();
     GLint MemoryKb = 0;
     glGetIntegerv(GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX, &MemoryKb);
@@ -1453,166 +1622,8 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-
-
-// 读取图片，返回ID
-unsigned int LoadTexture(char const* path)
-{
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-
-    int width, height, nrComponents;
-
-    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
-
-    if (data)
-    {
-        GLenum format = GL_RGB;
-        if (nrComponents == 1)// 灰度图
-            format = GL_RED;
-        else if (nrComponents == 3)// RGB图
-            format = GL_RGB;
-        else if (nrComponents == 4)// RGBA图
-            format = GL_RGBA;
-
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);        glGenerateMipmap(GL_TEXTURE_2D);// 生成mipmap
-
-        // 纹理Repeat的bug，当为透明材质时，边缘处理仍然为进行插值，导致有半透明框，因此要改变repeart策略
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-
-        stbi_image_free(data);
-        std::cout << "Load Texture SUCCESS : " << path << " ,ID=" << textureID << std::endl;
-    }
-    else
-    {
-        std::cout << "Load Texture Failed! " << path << std::endl;
-        stbi_image_free(data);
-    }
-    return textureID;
-}
-
-// 生成一个帧缓冲的纹理对象
-unsigned int CreateEmptyTexture()
-{
-
-    // 生成纹理
-    unsigned int texColorBuffer;
-    glGenTextures(1, &texColorBuffer);
-    glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-
-    // Texture只分配了Width*Height的内存但没有填充数据
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    cout << "Generate Frame Texture Success : " << texColorBuffer << endl;
-
-    return texColorBuffer;
-}
-
-// 生成一个深度缓冲的纹理对象
-unsigned int CreateDepthFrameTexture()
-{
-
-    // 生成纹理
-    unsigned int texColorBuffer;
-    glGenTextures(1, &texColorBuffer);
-    glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-
-    // Texture只分配了Width*Height的内存但没有填充数据
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    GLfloat borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    cout << "Generate Frame Texture Success : " << texColorBuffer << endl;
-
-    return texColorBuffer;
-}
-
-
-// 立方体贴图，传入路径集合
-unsigned int LoadCubeTexture(vector<string> textures_faces)
-{
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
-    int width, height, nrChannels;
-    unsigned char* data;
-    for (unsigned int i = 0; i < textures_faces.size(); i++)
-    {
-        data = stbi_load(textures_faces[i].c_str(), &width, &height, &nrChannels, 0);
-        
-        if (data)
-        {
-            GLenum format = GL_RGB;
-            if (nrChannels == 1)// 灰度图
-                format = GL_RED;
-            else if (nrChannels == 3)// RGB图
-                format = GL_RGB;
-            else if (nrChannels == 4)// RGBA图
-                format = GL_RGBA;
-
-            
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-
-            stbi_image_free(data); 
-        }
-        else
-        {
-            std::cout << "Load single piece of Cube Texture FAILED! " << textures_faces[i] << std::endl;
-            stbi_image_free(data);
-        }    
-    }
-
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    std::cout << "Load CubeTexture SUCCESS! " << " ,ID=" << textureID << std::endl;
-    return textureID;
-}
-
-
-// 空的立方体贴图，用于shadowMap
-unsigned int CreateDepthCubeTexture()
-{
-    unsigned int depthCubemapID;
-    glGenTextures(1, &depthCubemapID);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemapID);
-
-    for (unsigned i = 0; i < 6; ++i)
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-
-
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    std::cout << "Load Empty Depth CubeTexture SUCCESS! " << " ,ID=" << depthCubemapID << std::endl;
-    return depthCubemapID;
-}
-
 // 描边
-void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
+void DrawOutline(Shader ourlineShader, int step, float& scale, float targetScale)
 {
     // 原理
     /*
@@ -1626,12 +1637,12 @@ void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
     */
 
     // 先绘制其他物体，确保绘制地板的时候不会更新模板缓冲
-    if (step == 0){
+    if (step == 0) {
         glStencilMask(0x00); // 记得保证我们在绘制地板的时候不会更新模板缓冲
     }
 
     // pass 1
-    if (step == 1){
+    if (step == 1) {
         // 第一次渲染时，设置模板测试为0xFF，更新所有渲染的像素的模板值
         glStencilFunc(GL_ALWAYS, 1, 0xFF);// 此时被绘制的地方的模板值都更新为1
         glStencilMask(0xFF);
@@ -1648,9 +1659,10 @@ void DrawOutline(Shader ourlineShader,int step,float& scale,float targetScale)
         scale = targetScale;
     }
     // 恢复模板启用与深度测试
-    if (step == 3){
+    if (step == 3) {
         glStencilFunc(GL_ALWAYS, 0, 0xFF);
         glStencilMask(0xFF);
         //glEnable(GL_DEPTH_TEST);
     }
 }
+
