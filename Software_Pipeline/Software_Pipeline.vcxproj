@@ -169,6 +169,7 @@
     <ClInclude Include="src\Light.h" />
     <ClInclude Include="src\Mesh.h" />
     <ClInclude Include="src\Model.h" />
+    <ClInclude Include="src\Scene.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="include\stb_image.h" />
     <ClInclude Include="src\Texture.h" />
@@ -219,6 +220,10 @@
     <None Include="Shaders\Shadow\cubeShadowMap.frag" />
     <None Include="Shaders\Shadow\cubeShadowMap.geo" />
     <None Include="Shaders\Shadow\cubeShadowMap.vert" />
+    <None Include="Shaders\Shadow\cubeShadowMapDebug.frag" />
+    <None Include="Shaders\Shadow\cubeShadowMapDebug.vert" />
+    <None Include="Shaders\Shadow\cubeShadowMapRenderer.frag" />
+    <None Include="Shaders\Shadow\cubeShadowMapRenderer.vert" />
     <None Include="Shaders\Shadow\ShadowMapDebug.frag" />
     <None Include="Shaders\Shadow\ShadowMapDebug.vert" />
     <None Include="Shaders\Shadow\ShadowRenderer.frag" />

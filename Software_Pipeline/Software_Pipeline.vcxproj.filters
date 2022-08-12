@@ -47,6 +47,9 @@
     <ClInclude Include="src\Light.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\Scene.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\textures\cat.jpg">
@@ -119,5 +122,9 @@
     <None Include="Shaders\Shadow\cubeShadowMap.frag" />
     <None Include="Shaders\Shadow\cubeShadowMap.vert" />
     <None Include="Shaders\Shadow\cubeShadowMap.geo" />
+    <None Include="Shaders\Shadow\cubeShadowMapRenderer.vert" />
+    <None Include="Shaders\Shadow\cubeShadowMapRenderer.frag" />
+    <None Include="Shaders\Shadow\cubeShadowMapDebug.vert" />
+    <None Include="Shaders\Shadow\cubeShadowMapDebug.frag" />
   </ItemGroup>
 </Project>
