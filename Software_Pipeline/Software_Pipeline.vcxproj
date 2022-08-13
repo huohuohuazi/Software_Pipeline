@@ -209,6 +209,8 @@
     <None Include="Shaders\DebugShader\Model\ShowNormal.vert" />
     <None Include="Shaders\PostProcess\Bloom.frag" />
     <None Include="Shaders\PostProcess\Bloom.vert" />
+    <None Include="Shaders\PostProcess\GBuffer.frag" />
+    <None Include="Shaders\PostProcess\GBuffer.vert" />
     <None Include="Shaders\PostProcess\PostProcess.frag" />
     <None Include="Shaders\PostProcess\PostProcess.vert" />
     <None Include="Shaders\DebugShader\ReflectEnvironment.frag" />

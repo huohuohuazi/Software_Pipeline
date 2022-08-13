@@ -128,5 +128,7 @@
     <None Include="Shaders\Shadow\cubeShadowMapDebug.frag" />
     <None Include="Shaders\PostProcess\Bloom.vert" />
     <None Include="Shaders\PostProcess\Bloom.frag" />
+    <None Include="Shaders\PostProcess\GBuffer.vert" />
+    <None Include="Shaders\PostProcess\GBuffer.frag" />
   </ItemGroup>
 </Project>
