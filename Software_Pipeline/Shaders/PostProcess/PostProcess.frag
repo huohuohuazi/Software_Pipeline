@@ -2,16 +2,15 @@
 out vec4 FragColor;
 
 in vec2 TexCoords;
-in Texcoords_Stuct
-{
-    vec2 TexCoords;
-} texcoords_in;
 
 uniform float exposure;
 uniform bool hdr;
 
 uniform sampler2D screenTexture;
+uniform sampler2D bloomTexture;
+
 uniform bool On_GammaCorrection;// 是否开启Gamma矫正
+uniform bool On_Bloom;// 是否开启Bloom泛光
 
 vec3 Conv(float kernel[9]);
 //vec4 Grayscale(vec4 color_in);
@@ -24,11 +23,18 @@ void main()
     // if(gl_FragCoord.x<720)
     // 可以用于技术演示等，将画面分成两部分，同样可以用于其他着色器的测试
 
-    FragColor = texture(screenTexture, texcoords_in.TexCoords);
+    FragColor = texture(screenTexture, TexCoords);
+    if(On_Bloom)
+    {
+        vec3 bloomcolor = texture(bloomTexture, TexCoords).rgb;
+        FragColor.rgb += bloomcolor;
+    }
+    
 
     // 考虑HDR
     FragColor.rgb = vec3(1.0) - exp(-FragColor.rgb * exposure);
 
+    // Gamma矫正
     if(On_GammaCorrection)
     {
         float gamma = 2.2;

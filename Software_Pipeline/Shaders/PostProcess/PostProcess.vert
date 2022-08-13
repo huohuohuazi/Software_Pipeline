@@ -5,12 +5,11 @@ layout (location = 1) in vec2 aTexCoords;
 //out vec2 TexCoords;
 
 // 用结构体代替
-out Texcoords_Stuct{
-    vec2 TexCoords;
-} texcoords_out;
+out vec2 TexCoords;
+
 
 void main()
 {
     gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0); 
-    texcoords_out.TexCoords = aTexCoords;
+    TexCoords = aTexCoords;
 }

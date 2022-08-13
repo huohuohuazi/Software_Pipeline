@@ -15,7 +15,7 @@ void main()
 
     // 人为设置深度
     gl_FragDepth = lightDistance;
-   // gl_FragDepth=1.0f;
+    // gl_FragDepth=1.0f;
     // 在单一方向的shadowMap中，默认是这么做的
     // gl_FragDepth = gl_FragCoord.z;
 }

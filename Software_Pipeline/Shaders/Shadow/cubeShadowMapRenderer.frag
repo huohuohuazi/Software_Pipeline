@@ -117,9 +117,11 @@ void main()
     // 环境光不受阴影影响
     vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;
     
-    // Debug用 阴影二值化
-    // lighting=(1.0 - shadow)*vec3(1.0);
-    // FragColor = DebugShowDepth(frag_in.FragPos);
-
     FragColor = vec4(lighting, 1.0f);
+
+    // Debug用 阴影二值化
+    //lighting=(1.0 - shadow)*vec3(1.0);
+    //FragColor = DebugShowDepth(frag_in.FragPos);
+
+    
 }

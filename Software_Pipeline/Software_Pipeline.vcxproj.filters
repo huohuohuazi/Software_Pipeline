@@ -90,8 +90,8 @@
     <None Include="Shaders\DebugShader\BaseCube.vert" />
     <None Include="Shaders\DebugShader\AlphaTest.frag" />
     <None Include="Shaders\DebugShader\AlphaTest.vert" />
-    <None Include="Shaders\DebugShader\PostProcess.vert" />
-    <None Include="Shaders\DebugShader\PostProcess.frag" />
+    <None Include="Shaders\PostProcess\PostProcess.vert" />
+    <None Include="Shaders\PostProcess\PostProcess.frag" />
     <None Include="Shaders\DebugShader\Skybox.frag" />
     <None Include="Shaders\DebugShader\Skybox.vert" />
     <None Include="Shaders\DebugShader\ReflectEnvironment.vert" />
@@ -121,10 +121,12 @@
     <None Include="Shaders\Shadow\ShadowMapDebug.frag" />
     <None Include="Shaders\Shadow\cubeShadowMap.frag" />
     <None Include="Shaders\Shadow\cubeShadowMap.vert" />
-    <None Include="Shaders\Shadow\cubeShadowMap.geo" />
+    <None Include="Shaders\Shadow\cubeShadowMap.geom" />
     <None Include="Shaders\Shadow\cubeShadowMapRenderer.vert" />
     <None Include="Shaders\Shadow\cubeShadowMapRenderer.frag" />
     <None Include="Shaders\Shadow\cubeShadowMapDebug.vert" />
     <None Include="Shaders\Shadow\cubeShadowMapDebug.frag" />
+    <None Include="Shaders\PostProcess\Bloom.vert" />
+    <None Include="Shaders\PostProcess\Bloom.frag" />
   </ItemGroup>
 </Project>

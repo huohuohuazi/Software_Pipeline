@@ -87,8 +87,8 @@
     bool On_BlinnPhong = true;// 是否使用Blinn_Phong / Phong光照模型
     GLboolean On_GammaCorrection = true;// 是否开启Gamma矫正
     GLboolean shadows = true;// 是否开启阴影
-    bool HDR = true;// 是否使用HDR缓冲纹理
-
+    bool on_HDR = true;// 是否使用HDR缓冲纹理
+    bool On_Bloom = true;/// 是否开启Bloom泛光
 
     #define GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX 0x9048
     #define GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX 0x9049
@@ -100,7 +100,7 @@ Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 #pragma region 一个点光源
 
-    glm::vec3 lightPos(0.0f, 1.0f, 0.0f);
+    glm::vec3 lightPos(0.0f,0.5f, 0.0f);
     //glm::vec3 lightColor(0.3f, 0.3f, 0.3f);
     //float K_ambient = 0.05; //4  32
 
@@ -186,12 +186,12 @@ void processInput(GLFWwindow* window)
             }}
         if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE)  _2Pressed = false;
 
-        // 3 : 平行光源
+        // 3 : Bloom
         if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
             if (!_3Pressed) {
-                /*On_DirectLight = !On_DirectLight;
-                string tmp = On_DirectLight ? "On" : "OFF";
-                cout << "Use DirectLight : " << tmp << endl;*/
+                On_Bloom = !On_Bloom;
+                string tmp = On_Bloom ? "On" : "OFF";
+                cout << "Use Bloom : " << tmp << endl;
                 _3Pressed = true; 
             }}
         if (glfwGetKey(window, GLFW_KEY_3) == GLFW_RELEASE)  _3Pressed = false;
@@ -393,8 +393,19 @@ int main(int argc, char* argv[])
 
         // CBO
         // ColorBuffer Obect 颜色缓冲对象
-        unsigned int CBO = CreateEmptyTexture(HDR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, CBO, 0);
+        // 这里指定两个，一个用于颜色缓冲，一个用于Bloom后处理
+        unsigned int CBO[2];
+        for (int i = 0; i < 2; i++)
+        {
+            CBO[i] = CreateEmptyTexture(on_HDR);
+            // GL_COLOR_ATTACHMENT0与GL_COLOR_ATTACHMENT1
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, CBO[i], 0);
+
+        }
+        cout << "CBO:" << CBO[0]<<" , " << CBO[1] << endl;
+        GLuint attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+        glDrawBuffers(2, attachments);
+       
 
         // RBO
         // RenderBuffer Object 渲染缓冲对象 包括深度与模板缓冲对象
@@ -416,7 +427,7 @@ int main(int argc, char* argv[])
         // 阴影FBO
         unsigned DepthMapFBO;
         glGenFramebuffers(1, &DepthMapFBO);
-        
+        glBindFramebuffer(GL_FRAMEBUFFER, DepthMapFBO);
         //// 单一方向深度采样
         //unsigned int depthMap = CreateDepthFrameTexture();
         //glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO); 
@@ -428,11 +439,28 @@ int main(int argc, char* argv[])
 
         // 立方体方向深度采样
         unsigned int cubeDepthMap = CreateDepthCubeTexture();
-        glBindFramebuffer(GL_FRAMEBUFFER, DepthMapFBO);
         glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, cubeDepthMap, 0);
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
+        // BloomFBO
+        // 用于多次迭代后处理缓冲，Bloom使用垂直与水平方向交替处理，共需要32+32次后处理
+        unsigned BloomFBO[2];
+        glGenFramebuffers(2, BloomFBO);
+
+        unsigned BloomCBO[2];
+        glGenTextures(2, BloomCBO);
+
+        for (int i = 0; i < 2; i++)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, BloomFBO[i]);
+            BloomCBO[i] = CreateEmptyTexture(on_HDR);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, BloomCBO[i], 0);
+        }
+
 
     #pragma endregion
 
@@ -455,8 +483,9 @@ int main(int argc, char* argv[])
         // 天空球
         Shader SkyboxShader("Shaders/DebugShader/Skybox.vert", "Shaders/DebugShader/Skybox.frag");
 
-        // 我觉得还是叫后处理合适一些
-        Shader PostShader("Shaders/DebugShader/PostProcess.vert", "Shaders/DebugShader/PostProcess.frag");
+        // 后处理
+        Shader PostShader("Shaders/PostProcess/PostProcess.vert", "Shaders/PostProcess/PostProcess.frag");
+        Shader BloomShader("Shaders/PostProcess/Bloom.vert", "Shaders/PostProcess/Bloom.frag");
 
 
         // 模型（无光照）
@@ -470,7 +499,7 @@ int main(int argc, char* argv[])
         Shader PointLightShader("Shaders/Lighting/PointLight.vert", "Shaders/Lighting/PointLight.frag");
         // shadowMap采样
         //Shader ShadowMapShader("Shaders/Shadow/ShadowMap.vert", "Shaders/Shadow/ShadowMap.frag");
-        Shader cubeShadowMapShader("Shaders/Shadow/cubeShadowMap.vert","Shaders/Shadow/cubeShadowMap.geo", "Shaders/Shadow/cubeShadowMap.frag");
+        Shader cubeShadowMapShader("Shaders/Shadow/cubeShadowMap.vert","Shaders/Shadow/cubeShadowMap.geom", "Shaders/Shadow/cubeShadowMap.frag");
         // 阴影渲染
         //Shader ShadowShader("Shaders/Shadow/ShadowRenderer.vert", "Shaders/Shadow/ShadowRenderer.frag");
         Shader cubeShadowShader("Shaders/Shadow/cubeShadowMapRenderer.vert", "Shaders/Shadow/cubeShadowMapRenderer.frag");
@@ -514,25 +543,25 @@ int main(int argc, char* argv[])
         AlphaShader.use();
         AlphaShader.setInt("texture1", 0);
 
-        // 后处理Shader
+        // 后处理
         PostShader.use();
         PostShader.setInt("screenTexture", 0);
+        PostShader.setInt("bloomTexture", 1);
+
+        BloomShader.use();
+        BloomShader.setInt("lightTexture", 0); 
+
 
         // 阴影Shader
         //ShadowShader.use();
         //ShadowShader.setInt("diffuseTexture", 0);
         //ShadowShader.setInt("shadowMap",1);
-        //glUniform1i(glGetUniformLocation(ShadowShader.ID, "diffuseTexture"), 0);
-        //glUniform1i(glGetUniformLocation(ShadowShader.ID, "shadowMap"), 1);
         cubeShadowShader.use();
         cubeShadowShader.setInt("texture_diffuse1", 0);
         cubeShadowShader.setInt("depthMap",1);
-        //glUniform1i(glGetUniformLocation(cubeShadowShader.ID, "texture_diffuse1"), 0);
-        //glUniform1i(glGetUniformLocation(cubeShadowShader.ID, "depthMap"), 1);
 
-
-
-       // ShadowMapDebugShader.use();
+        // 阴影Debug
+        // ShadowMapDebugShader.use();
         //ShadowMapDebugShader.setInt("depthMap", 0);
         cubeShadowMapDebugShader.use();
         cubeShadowMapDebugShader.setInt("depthMap", 0);
@@ -982,7 +1011,6 @@ int main(int argc, char* argv[])
 
             // 绑定深度FBO
             glBindFramebuffer(GL_FRAMEBUFFER, DepthMapFBO);
-
             glClear(GL_DEPTH_BUFFER_BIT);
 
 
@@ -992,7 +1020,7 @@ int main(int argc, char* argv[])
             // glUniform3fv(glGetUniformLocation(cubeShadowMapShader.ID, "lightPos"), 1, &lightPos[0]);
             for (GLuint i = 0; i < 6; ++i)
                 cubeShadowMapShader.setMat4("lightSpaceMatrix[" + std::to_string(i) + "]", lightSpaceMatrix[i]);
-
+     
 
             // floor
             glm::mat4 model = glm::mat4(1.0f);
@@ -1062,9 +1090,6 @@ int main(int argc, char* argv[])
             cubeShadowShader.setVec3("viewPos", camera.Position);
             cubeShadowShader.setBool("shadows", shadows);
             cubeShadowShader.setFloat("far_plane", far_plane);
-
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, floorTexture);
      
 
             cubeShadowShader.use();
@@ -1072,7 +1097,7 @@ int main(int argc, char* argv[])
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, floorTexture);
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, DepthMapFBO);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, cubeDepthMap);
             model = glm::mat4(1.0f);
             //model = glm::translate(model, glm::vec3(0, -1, 0));
             cubeShadowShader.setMat4("model", model);
@@ -1083,8 +1108,6 @@ int main(int argc, char* argv[])
             // cubes
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, cubeTexture);
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, DepthMapFBO);
 
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
@@ -1105,13 +1128,13 @@ int main(int argc, char* argv[])
 
                 //// ShadowMap Visualization
                 //ShadowMapDebugShader.use();
-                /*ShadowMapDebugShader.use();
-                ShadowMapDebugShader.setFloat("near_plane", near_plane);
-                ShadowMapDebugShader.setFloat("far_plane", far_plane);
+                /*cubeShadowMapDebugShader.use();
+                cubeShadowMapDebugShader.setFloat("near_plane", near_plane);
+                cubeShadowMapDebugShader.setFloat("far_plane", far_plane);
                 model = glm::mat4(1.0f);
-                ShadowMapDebugShader.setMat4("model", model);
+                cubeShadowMapDebugShader.setMat4("model", model);
                 glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, depthMap);
+                glBindTexture(GL_TEXTURE_2D, cubeDepthMap);
                 glBindVertexArray(grassVAO);
                 glDrawArrays(GL_TRIANGLES, 0, 6);*/
 
@@ -1340,19 +1363,63 @@ int main(int argc, char* argv[])
         #pragma region 后处理
         
             glBindFramebuffer(GL_FRAMEBUFFER, 0); // 解绑FBO
-            glDisable(GL_DEPTH_TEST);
-            glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
 
-            PostShader.use();
-            glBindVertexArray(screenVAO);
-            glBindTexture(GL_TEXTURE_2D, CBO);
-            float exposure = 1.0;// 曝光参数
-            // 开启gamma矫正
-            PostShader.setBool("On_GammaCorrection", On_GammaCorrection);
-            PostShader.setFloat("exposure", exposure);
-            PostShader.setBool("hdr", HDR);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
+            #pragma region Bloom
+
+                bool horizontal = true;
+                unsigned int amount = 10;
+
+                if (On_Bloom)
+                {
+                    
+                    BloomShader.use();
+                    glBindVertexArray(screenVAO);
+                    glActiveTexture(GL_TEXTURE0);
+                    for (unsigned int i = 0; i < amount; i++)
+                    {
+                        glBindFramebuffer(GL_FRAMEBUFFER, BloomFBO[horizontal]);
+                        BloomShader.setBool("horizontal", horizontal);
+
+                        // 第一次时，输入来自灯光的颜色缓冲
+                        glBindTexture(GL_TEXTURE_2D, i == 0 ? CBO[1] : BloomCBO[!horizontal]);
+                        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+                        horizontal = !horizontal;
+                    }
+                }
+
+                
+            #pragma endregion
+            
+            glBindFramebuffer(GL_FRAMEBUFFER, 0); // 解绑FBO
+
+            #pragma region 最终屏幕
+
+                glDisable(GL_DEPTH_TEST);
+                glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT);
+
+                PostShader.use();
+                glBindVertexArray(screenVAO);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, CBO[0]);
+                if (On_Bloom)
+                {
+                    glActiveTexture(GL_TEXTURE1);
+                    glBindTexture(GL_TEXTURE_2D, BloomCBO[!horizontal]);
+                }
+                float exposure = 1.0;// 曝光参数
+                // 开启gamma矫正
+                PostShader.setBool("On_GammaCorrection", On_GammaCorrection);
+                PostShader.setBool("On_Bloom", On_Bloom);
+                PostShader.setFloat("exposure", exposure);
+                PostShader.setBool("hdr", on_HDR);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+
+            #pragma endregion
+
+
+            
             
         #pragma endregion
             
@@ -1506,7 +1573,6 @@ unsigned int CreateEmptyTexture(bool HDR)
     
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
     cout << "Generate Frame Texture Success : " << texColorBuffer << endl;
 
     return texColorBuffer;
