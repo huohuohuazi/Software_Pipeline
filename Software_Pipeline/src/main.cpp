@@ -26,7 +26,8 @@
     #include "Model.h"
     #include "Camera.h"
     #include "VBO.h"
-    
+    #include "Gbuffer.h"
+
     //#include "Texture.h"
     //#include "stb_image.h"
     //#include "src/Texture.h"
@@ -62,6 +63,7 @@
 
     float deltaTime = 0.0f; // 当前帧与上一帧的时间差
     float lastFrame = 0.0f; // 上一帧的时间
+    const GLfloat clearcolor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 
     // 键盘变量
     bool firstMouse = true;
@@ -382,85 +384,99 @@ int main(int argc, char* argv[])
 
     #pragma endregion
 
+
     #pragma region FBO
 
+        #pragma region 默认FBO，用于后处理
+
+            // FBO
+            // FrameBufferBuffer Object 帧缓冲对象
+            unsigned int FBO;
+            glGenFramebuffers(1, &FBO);
+            glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+            // CBO
+            // ColorBuffer Obect 颜色缓冲对象
+            // 这里指定两个，一个用于颜色缓冲，一个用于Bloom后处理
+            unsigned int CBO[2];
+            for (int i = 0; i < 2; i++)
+            {
+                CBO[i] = CreateEmptyTexture(on_HDR);
+                // GL_COLOR_ATTACHMENT0与GL_COLOR_ATTACHMENT1
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, CBO[i], 0);
+
+            }
+            cout << "CBO:" << CBO[0] << " , " << CBO[1] << endl;
+            GLuint attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+            glDrawBuffers(2, attachments);
+
+
+            // RBO
+            // RenderBuffer Object 渲染缓冲对象 包括深度与模板缓冲对象
+            GLuint RBO;
+            glGenRenderbuffers(1, &RBO);
+            glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+            // 内部格式为GL_DEPTH24_STENCIL8，Depth是24位的,Stencil是8位的
+            // glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, Width, Height);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, Width, Height);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+            if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+                std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        #pragma endregion
+
         
-        // FBO
-        // FrameBufferBuffer Object 帧缓冲对象
-        unsigned int FBO;
-        glGenFramebuffers(1, &FBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+        #pragma region 阴影FBO，用于shadowMap
 
-        // CBO
-        // ColorBuffer Obect 颜色缓冲对象
-        // 这里指定两个，一个用于颜色缓冲，一个用于Bloom后处理
-        unsigned int CBO[2];
-        for (int i = 0; i < 2; i++)
-        {
-            CBO[i] = CreateEmptyTexture(on_HDR);
-            // GL_COLOR_ATTACHMENT0与GL_COLOR_ATTACHMENT1
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, CBO[i], 0);
+            // 阴影FBO
+            unsigned DepthMapFBO;
+            glGenFramebuffers(1, &DepthMapFBO);
+            glBindFramebuffer(GL_FRAMEBUFFER, DepthMapFBO);
+            //// 单一方向深度采样
+            //unsigned int depthMap = CreateDepthFrameTexture();
+            //glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO); 
+            //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+            //glDrawBuffer(GL_NONE);
+            //glReadBuffer(GL_NONE);
+            //glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        }
-        cout << "CBO:" << CBO[0]<<" , " << CBO[1] << endl;
-        GLuint attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-        glDrawBuffers(2, attachments);
-       
 
-        // RBO
-        // RenderBuffer Object 渲染缓冲对象 包括深度与模板缓冲对象
-        GLuint RBO;
-        glGenRenderbuffers(1, &RBO);
-        glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-        // 内部格式为GL_DEPTH24_STENCIL8，Depth是24位的,Stencil是8位的
-        // glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, Width, Height);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, Width, Height);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+            // 立方体方向深度采样
+            unsigned int cubeDepthMap = CreateDepthCubeTexture();
+            glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, cubeDepthMap, 0);
+            glDrawBuffer(GL_NONE);
+            glReadBuffer(GL_NONE);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        #pragma endregion
+
         
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        
+        #pragma region BloomFBO，用于泛光
+
+            // 注：Bloom有三个CBO：一个在默认FBO上，用于记录灯光亮度值；另外两个在BloomFBO上，用于迭代处理泛光特效
+
+            // BloomFBO
+            // 用于多次迭代后处理缓冲，Bloom使用垂直与水平方向交替处理，共需要32+32次后处理
+            unsigned BloomFBO[2];
+            glGenFramebuffers(2, BloomFBO);
+
+            unsigned BloomCBO[2];
+            glGenTextures(2, BloomCBO);
+
+            for (int i = 0; i < 2; i++)
+            {
+                glBindFramebuffer(GL_FRAMEBUFFER, BloomFBO[i]);
+                BloomCBO[i] = CreateEmptyTexture(on_HDR);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, BloomCBO[i], 0);
+            }
+
+        #pragma endregion
 
 
-
-        // 阴影FBO
-        unsigned DepthMapFBO;
-        glGenFramebuffers(1, &DepthMapFBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, DepthMapFBO);
-        //// 单一方向深度采样
-        //unsigned int depthMap = CreateDepthFrameTexture();
-        //glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO); 
-        //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-        //glDrawBuffer(GL_NONE);
-        //glReadBuffer(GL_NONE);
-        //glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        
-
-        // 立方体方向深度采样
-        unsigned int cubeDepthMap = CreateDepthCubeTexture();
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, cubeDepthMap, 0);
-        glDrawBuffer(GL_NONE);
-        glReadBuffer(GL_NONE);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-
-        // BloomFBO
-        // 用于多次迭代后处理缓冲，Bloom使用垂直与水平方向交替处理，共需要32+32次后处理
-        unsigned BloomFBO[2];
-        glGenFramebuffers(2, BloomFBO);
-
-        unsigned BloomCBO[2];
-        glGenTextures(2, BloomCBO);
-
-        for (int i = 0; i < 2; i++)
-        {
-            glBindFramebuffer(GL_FRAMEBUFFER, BloomFBO[i]);
-            BloomCBO[i] = CreateEmptyTexture(on_HDR);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, BloomCBO[i], 0);
-        }
-
+        // Gbuffer
+        GBuffer gbuffer;  
 
     #pragma endregion
 
@@ -508,9 +524,13 @@ int main(int argc, char* argv[])
         Shader cubeShadowMapDebugShader("Shaders/Shadow/cubeShadowMapDebug.vert", "Shaders/Shadow/cubeShadowMapDebug.frag");
 
 
-        Shader BlingPhongShader("Shaders/Lighting/Bling_Phong.vert", "Shaders/Lighting/Bling_Phong.frag");
+        //Shader BlingPhongShader("Shaders/Lighting/Bling_Phong.vert", "Shaders/Lighting/Bling_Phong.frag");
 
 
+        // GBuffer
+        Shader GBufferGeometryShader("Shaders/Gbuffer/GeometryProcess.vert", "Shaders/Gbuffer/GeometryProcess.frag");
+        Shader GBufferLightingShader("Shaders/Gbuffer/LightingProcess.vert", "Shaders/Gbuffer/LightingProcess.frag");
+        
 
     #pragma endregion
 
@@ -577,8 +597,19 @@ int main(int argc, char* argv[])
         RefractionShader.use();
         RefractionShader.setInt("skybox", 0);
 
-        BlingPhongShader.use();
-        BlingPhongShader.setInt("texture_diffuse1", 0);
+        //BlingPhongShader.use();
+        //BlingPhongShader.setInt("texture_diffuse1", 0);
+
+        // Gbuffer
+        GBufferGeometryShader.use();
+        GBufferGeometryShader.setInt("texture_diffuse1", 0);
+        // GBuffer光照阶段，输入三个缓冲
+        GBufferLightingShader.use();
+        GBufferLightingShader.setInt("gPosition", 0);
+        GBufferLightingShader.setInt("gNormal", 1);
+        GBufferLightingShader.setInt("gAlbedoSpec", 2);
+        GBufferLightingShader.setInt("depthMap", 3); 
+        
 
     #pragma endregion
 
@@ -924,7 +955,7 @@ int main(int argc, char* argv[])
         */
     
 
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
            
     #pragma region 绘制循环
 
@@ -1030,8 +1061,6 @@ int main(int argc, char* argv[])
             glDrawArrays(GL_TRIANGLES, 0, 6);
             
 
-
-
             // cubes
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
@@ -1074,96 +1103,136 @@ int main(int argc, char* argv[])
         #pragma endregion
 
            
-        #pragma region Pass2: Render Shadow
-            
             // 返回相机空间
             glViewport(0, 0, Width, Height);
             glBindFramebuffer(GL_FRAMEBUFFER, FBO);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            cubeShadowShader.use();
-
-            cubeShadowShader.setMat4("projection", projection);
-            cubeShadowShader.setMat4("view", view);
-
-            cubeShadowShader.setVec3("lightPos", lightPos);
-            cubeShadowShader.setVec3("viewPos", camera.Position);
-            cubeShadowShader.setBool("shadows", shadows);
-            cubeShadowShader.setFloat("far_plane", far_plane);
-     
-
-            cubeShadowShader.use();
-            // floor
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, floorTexture);
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, cubeDepthMap);
-            model = glm::mat4(1.0f);
-            //model = glm::translate(model, glm::vec3(0, -1, 0));
-            cubeShadowShader.setMat4("model", model);
-            glBindVertexArray(planeVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
-            // cubes
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, cubeTexture);
+        #pragma region Pass2 : 渲染物体与阴影
 
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
-            model = glm::scale(model, glm::vec3(0.5f));
-            cubeShadowShader.setMat4("model", model);
-            glBindVertexArray(cubeVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            #pragma region GBuffer几何阶段
 
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0));
-            model = glm::scale(model, glm::vec3(0.5f));
-            cubeShadowShader.setMat4("model", model);
-            glBindVertexArray(cubeVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-    
+                    glBindFramebuffer(GL_FRAMEBUFFER, gbuffer.gBuffer);
+                    // 之后的Buffer都会输出到GBuffer对象上
+                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                    GBufferGeometryShader.use();
+
+                    GBufferGeometryShader.setMat4("projection", projection);
+                    GBufferGeometryShader.setMat4("view", view);
+
+                    // floor
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, floorTexture);
+                    model = glm::mat4(1.0f);
+                    GBufferGeometryShader.setMat4("model", model);
+                    glBindVertexArray(planeVAO);
+                    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+                    // cubes
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, cubeTexture);
+                    model = glm::mat4(1.0f);
+                    model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
+                    model = glm::scale(model, glm::vec3(0.5f));
+                    GBufferGeometryShader.setMat4("model", model);
+                    glBindVertexArray(cubeVAO);
+                    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+                    model = glm::mat4(1.0f);
+                    model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0));
+                    model = glm::scale(model, glm::vec3(0.5f));
+                    GBufferGeometryShader.setMat4("model", model);
+                    glBindVertexArray(cubeVAO);
+                    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+            #pragma endregion
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+                    // 将GBuffer中的 深度缓冲 复制到 默认FBO的深度缓冲上
+                    glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer.gBuffer);
+                    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO);
+                    glBlitFramebuffer(0, 0, Width, Height, 0, 0, Width, Height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+
+            #pragma region GBuffer光照阶段
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+                    glClear(GL_COLOR_BUFFER_BIT);
+
+                    glDisable(GL_DEPTH_TEST);
+
+                    GBufferLightingShader.use();
+                    GBufferLightingShader.setVec3("lights.lightPos", lightPos);
+                    //GBufferLightingShader.setVec3("lightPos", lightPos);
+                    GBufferLightingShader.setVec3("viewPos", camera.Position);
+                    GBufferLightingShader.setBool("shadows", shadows);
+                    GBufferLightingShader.setFloat("far_plane", far_plane);
+
+
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, gbuffer.PositionCBO);
+                    glActiveTexture(GL_TEXTURE1);
+                    glBindTexture(GL_TEXTURE_2D, gbuffer.NormalCBO);
+                    glActiveTexture(GL_TEXTURE2);
+                    glBindTexture(GL_TEXTURE_2D, gbuffer.ColorAndSpecularCBO);
+                    glActiveTexture(GL_TEXTURE3);
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, cubeDepthMap);
+
+                    glBindVertexArray(screenVAO);
+                    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+                    glEnable(GL_DEPTH_TEST);
 
             #pragma region ShadowDebug
 
-                //// ShadowMap Visualization
-                //ShadowMapDebugShader.use();
-                /*cubeShadowMapDebugShader.use();
-                cubeShadowMapDebugShader.setFloat("near_plane", near_plane);
-                cubeShadowMapDebugShader.setFloat("far_plane", far_plane);
-                model = glm::mat4(1.0f);
-                cubeShadowMapDebugShader.setMat4("model", model);
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, cubeDepthMap);
-                glBindVertexArray(grassVAO);
-                glDrawArrays(GL_TRIANGLES, 0, 6);*/
+                    //// ShadowMap Visualization
+                    //ShadowMapDebugShader.use();
+                    /*cubeShadowMapDebugShader.use();
+                    cubeShadowMapDebugShader.setFloat("near_plane", near_plane);
+                    cubeShadowMapDebugShader.setFloat("far_plane", far_plane);
+                    model = glm::mat4(1.0f);
+                    cubeShadowMapDebugShader.setMat4("model", model);
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, cubeDepthMap);
+                    glBindVertexArray(grassVAO);
+                    glDrawArrays(GL_TRIANGLES, 0, 6);*/
 
-                /*
-                cubeShadowMapDebugShader.use();
-                glm::vec3 Ball_center(4, 0, 0);
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, Ball_center);
-                model = glm::scale(model, glm::vec3(0.2));
-                cubeShadowMapDebugShader.setMat4("model", model);
-                cubeShadowMapDebugShader.setVec3("center", Ball_center);
-                cubeShadowMapDebugShader.setFloat("near_plane", near_plane);
-                cubeShadowMapDebugShader.setFloat("far_plane", far_plane);
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_CUBE_MAP, DepthMapFBO);
-                ball.Draw(cubeShadowMapDebugShader);
-                // glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-                */
+                    /*
+                    cubeShadowMapDebugShader.use();
+                    glm::vec3 Ball_center(4, 0, 0);
+                    model = glm::mat4(1.0f);
+                    model = glm::translate(model, Ball_center);
+                    model = glm::scale(model, glm::vec3(0.2));
+                    cubeShadowMapDebugShader.setMat4("model", model);
+                    cubeShadowMapDebugShader.setVec3("center", Ball_center);
+                    cubeShadowMapDebugShader.setFloat("near_plane", near_plane);
+                    cubeShadowMapDebugShader.setFloat("far_plane", far_plane);
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, DepthMapFBO);
+                    ball.Draw(cubeShadowMapDebugShader);
+                    // glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+                    */
 
             #pragma endregion
 
 
+            #pragma endregion
+
         #pragma endregion
-        
-       
+  
+            
+
+            
 
         #pragma region 绘制光源
 
+            // Bloom有三个CBO，其中一个绑在默认CBO上
             PointLightShader.use();
+            //glClearBufferfv(GL_COLOR,CBO[1], clearcolor);
             model = glm::mat4(1.0f);
             model = glm::translate(model, lightPos);
             model = glm::scale(model, glm::vec3(0.1));   
@@ -1375,6 +1444,12 @@ int main(int argc, char* argv[])
                     BloomShader.use();
                     glBindVertexArray(screenVAO);
                     glActiveTexture(GL_TEXTURE0);
+
+                    /*glBindFramebuffer(GL_FRAMEBUFFER, BloomFBO[0]);
+                    glClearBufferfv(GL_COLOR, BloomCBO[0], clearcolor);
+                    glBindFramebuffer(GL_FRAMEBUFFER, BloomFBO[1]);
+                    glClearBufferfv(GL_COLOR, BloomCBO[1], clearcolor);*/
+
                     for (unsigned int i = 0; i < amount; i++)
                     {
                         glBindFramebuffer(GL_FRAMEBUFFER, BloomFBO[horizontal]);
@@ -1395,14 +1470,15 @@ int main(int argc, char* argv[])
 
             #pragma region 最终屏幕
 
+            
                 glDisable(GL_DEPTH_TEST);
-                glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT);
 
                 PostShader.use();
                 glBindVertexArray(screenVAO);
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, CBO[0]);
+                //glBindTexture(GL_TEXTURE_2D,);
                 if (On_Bloom)
                 {
                     glActiveTexture(GL_TEXTURE1);
@@ -1415,6 +1491,7 @@ int main(int argc, char* argv[])
                 PostShader.setFloat("exposure", exposure);
                 PostShader.setBool("hdr", on_HDR);
                 glDrawArrays(GL_TRIANGLES, 0, 6);
+                glEnable(GL_DEPTH_TEST);
 
             #pragma endregion
 

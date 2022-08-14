@@ -50,6 +50,9 @@
     <ClInclude Include="src\Scene.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\Gbuffer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\textures\cat.jpg">
@@ -128,7 +131,9 @@
     <None Include="Shaders\Shadow\cubeShadowMapDebug.frag" />
     <None Include="Shaders\PostProcess\Bloom.vert" />
     <None Include="Shaders\PostProcess\Bloom.frag" />
-    <None Include="Shaders\PostProcess\GBuffer.vert" />
-    <None Include="Shaders\PostProcess\GBuffer.frag" />
+    <None Include="Shaders\Gbuffer\GeometryProcess.vert" />
+    <None Include="Shaders\Gbuffer\GeometryProcess.frag" />
+    <None Include="Shaders\Gbuffer\LightingProcess.vert" />
+    <None Include="Shaders\Gbuffer\LightingProcess.frag" />
   </ItemGroup>
 </Project>

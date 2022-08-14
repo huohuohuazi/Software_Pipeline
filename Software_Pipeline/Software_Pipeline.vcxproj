@@ -169,6 +169,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Camera.h" />
+    <ClInclude Include="src\Gbuffer.h" />
     <ClInclude Include="src\Light.h" />
     <ClInclude Include="src\Mesh.h" />
     <ClInclude Include="src\Model.h" />
@@ -185,6 +186,10 @@
     <Image Include="resources\textures\gongzi.png" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shaders\Gbuffer\GeometryProcess.frag" />
+    <None Include="Shaders\Gbuffer\GeometryProcess.vert" />
+    <None Include="Shaders\Gbuffer\LightingProcess.frag" />
+    <None Include="Shaders\Gbuffer\LightingProcess.vert" />
     <None Include="Shaders\Lighting\LightBall.frag" />
     <None Include="Shaders\Lighting\LightBall.vert" />
     <None Include="Shaders\Lighting\PointLight.frag" />
@@ -209,8 +214,6 @@
     <None Include="Shaders\DebugShader\Model\ShowNormal.vert" />
     <None Include="Shaders\PostProcess\Bloom.frag" />
     <None Include="Shaders\PostProcess\Bloom.vert" />
-    <None Include="Shaders\PostProcess\GBuffer.frag" />
-    <None Include="Shaders\PostProcess\GBuffer.vert" />
     <None Include="Shaders\PostProcess\PostProcess.frag" />
     <None Include="Shaders\PostProcess\PostProcess.vert" />
     <None Include="Shaders\DebugShader\ReflectEnvironment.frag" />
