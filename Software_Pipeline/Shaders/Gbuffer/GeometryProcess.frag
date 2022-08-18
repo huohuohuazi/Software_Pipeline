@@ -1,23 +1,47 @@
-#version 330 core
-layout (location = 0) out vec3 gPosition;
+#version 430 core
+layout (location = 0) out vec3 gPositionDepth;// ï¿½ï¿½ï¿½ï¿½Î»Pos+depth
 layout (location = 1) out vec3 gNormal;
-layout (location = 2) out vec3 gAlbedoSpec;// ×¢ÒâÕâÀïÒªºÍCBOµÄRGB/RGBAÍ³Ò»
+layout (location = 2) out vec3 gAlbedoSpec;// ×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½CBOï¿½ï¿½RGB/RGBAÍ³Ò»
+layout (location = 3) out vec3 viewPosition;
+layout (location = 4) out vec3 viewNormal;
 
 in VS_OUT {
-    vec3 FragPos;
-    vec3 Normal;
+    vec3 worldFragPos;
+    vec3 worldNormal;
     vec2 TexCoords;
+
+    vec3 viewFragPos;
+    vec3 viewNormal;
 } frag_in;
 
 uniform sampler2D texture_diffuse1;
 //uniform sampler2D texture_specular1;
 
+
+const float NEAR = 0.1; // Í¶Ó°ï¿½ï¿½ï¿½ï¿½Ä½ï¿½Æ½ï¿½ï¿½
+const float FAR = 100.0f; // Í¶Ó°ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶Æ½ï¿½ï¿½
+// ï¿½ï¿½È¡ï¿½ï¿½ï¿½Öµ
+float LinearizeDepth(float depth)
+{
+    float z = depth * 2.0 - 1.0; // ï¿½Øµï¿½NDC
+    return (2.0 * NEAR * FAR) / (FAR + NEAR - z * (FAR - NEAR));    
+}
+
+
 void main()
 {    
-    // Êä³öÖÁÖ¸¶¨µÄÑÕÉ«»º³åÖÐ
-    gPosition = frag_in.FragPos;// ÕâÀïÊÇÊÀ½ç¿Õ¼ä×ø±ê
-    gNormal = normalize(frag_in.Normal);
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    gPositionDepth.rgb = frag_in.worldFragPos;// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½
+    // gPositionDepth.a = LinearizeDepth(gl_FragCoord.z); 
+    //gPositionDepth.a = 0.0;
+
+    gNormal = normalize(frag_in.worldNormal);
+
+    viewPosition=frag_in.viewFragPos;
+    viewNormal= normalize(frag_in.viewNormal);
+   
+
     gAlbedoSpec = texture(texture_diffuse1, frag_in.TexCoords).rgb;
-    // ´æ´¢¾µÃæÇ¿¶Èµ½AÍ¨µÀÖÐ
+    // ï¿½æ´¢ï¿½ï¿½ï¿½ï¿½Ç¿ï¿½Èµï¿½AÍ¨ï¿½ï¿½ï¿½ï¿½
     // gAlbedoSpec.a = texture(texture_specular1, frag_in. TexCoords).r;
 }  

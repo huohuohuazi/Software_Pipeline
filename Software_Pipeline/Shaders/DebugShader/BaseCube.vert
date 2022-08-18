@@ -1,7 +1,7 @@
-#version 330 core
-layout (location = 0) in vec3 aPos;//¶¥µã×ø±ê
-layout (location = 1) in vec3 aNormal;//¶¥µã×ø±ê
-layout (location = 2) in vec2 aTexCoord;//ÎÆÀí×ø±ê
+#version 430 core
+layout (location = 0) in vec3 aPos;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+layout (location = 1) in vec3 aNormal;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+layout (location = 2) in vec2 aTexCoord;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 // size=16*4 + 16*4 = 128
 layout (std140,binding = 1) uniform VPmatrix
@@ -18,7 +18,7 @@ out vec3 Normal;
 
 void main() {
 
-	//³Ë·¨´ÓÓÒÍù×ó¿ªÊ¼
+	//ï¿½Ë·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼
 	gl_Position = projection * view * model * vec4(aPos, 1.0);
 	TexCoords = aTexCoord;
 	Normal=aNormal;

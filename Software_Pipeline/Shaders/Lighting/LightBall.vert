@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 uniform vec3 lightPos;
 uniform mat4 model;
@@ -12,6 +12,6 @@ layout (std140,binding = 1) uniform VPmatrix
 
 void main()
 {
-    // 于观察空间的位置
+    // 锟节观诧拷占锟斤拷位锟斤拷
     gl_Position = projection * view * model * vec4(lightPos, 1.0);
 }

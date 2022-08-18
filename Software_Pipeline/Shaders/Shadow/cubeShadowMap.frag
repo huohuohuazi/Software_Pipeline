@@ -1,7 +1,7 @@
-#version 330 core
+#version 430 core
 in vec4 FragPos;
-// ²ÉÑùÒ»´ÎÉî¶È
-// Ã»ÓĞout
+// ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½
+// Ã»ï¿½ï¿½out
 uniform vec3 lightPos;
 uniform float far_plane;
 
@@ -10,12 +10,12 @@ void main()
 {
     // 
     float lightDistance = length(FragPos.xyz - lightPos);
-    // ¹éÒ»»¯¾àÀë£¬ÔÚäÖÈ¾Ê±ĞèÒª³ËÉÏfar_plane½øĞĞ±È½Ï
+    // ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½È¾Ê±ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½far_planeï¿½ï¿½ï¿½Ğ±È½ï¿½
     lightDistance = lightDistance / far_plane;
 
-    // ÈËÎªÉèÖÃÉî¶È
+    // ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     gl_FragDepth = lightDistance;
     // gl_FragDepth=1.0f;
-    // ÔÚµ¥Ò»·½ÏòµÄshadowMapÖĞ£¬Ä¬ÈÏÊÇÕâÃ´×öµÄ
+    // ï¿½Úµï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½shadowMapï¿½Ğ£ï¿½Ä¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½ï¿½
     // gl_FragDepth = gl_FragCoord.z;
 }

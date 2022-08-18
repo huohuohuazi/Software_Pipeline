@@ -109,3 +109,4 @@ vec3 EdgeDetect()
     return result;
 
 }
+

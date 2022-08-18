@@ -1,22 +1,22 @@
-#version 330 core
+#version 430 core
 out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D lightTexture;
 
-// µÆ¹âÖµÊä³öµ½Ö¸¶¨µÄÖ¡»º³å¶ÔÏóÉÏ
+// ï¿½Æ¹ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½Ö¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 uniform bool horizontal;
 
-// ¶ÔÓÚ8*8µÄ¾í»ýºË
-// ×ó²à/ÓÒ²à£¨º¬×Ô¼º£©Îå¸öÏñËØµÄÈ¨Öµ
+// ï¿½ï¿½ï¿½ï¿½8*8ï¿½Ä¾ï¿½ï¿½ï¿½ï¿½ï¿½
+// ï¿½ï¿½ï¿½/ï¿½Ò²à£¨ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½È¨Öµ
 float weight[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
 
 void main()
 {             
     vec2 offset = 1.0 / textureSize(lightTexture, 0);
     vec3 result = texture(lightTexture, TexCoords).rgb * weight[0];
-    // Ë®Æ½·½Ïò
-    // Ã¿´Î²ÉÑù¹²8¸öÏñËØ
+    // Ë®Æ½ï¿½ï¿½ï¿½ï¿½
+    // Ã¿ï¿½Î²ï¿½ï¿½ï¿½ï¿½ï¿½8ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     if(horizontal)
     {
         for(int i = 1; i < 5; ++i)
@@ -25,7 +25,7 @@ void main()
             result += texture(lightTexture, TexCoords - vec2(offset.x * i, 0.0)).rgb * weight[i];
         }
     }
-    // ´¹Ö±·½Ïò
+    // ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½
     else
     {
         for(int i = 1; i < 5; ++i)

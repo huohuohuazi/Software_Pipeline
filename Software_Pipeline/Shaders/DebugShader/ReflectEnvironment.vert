@@ -1,6 +1,6 @@
-#version 330 core
+#version 430 core
 
-// ²¼¾ÖÐÞÊÎ·û
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î·ï¿½
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 
@@ -21,7 +21,7 @@ layout (std140,binding = 1) uniform VPmatrix
 void main()
 {
 	 Normal =  mat3(transpose(inverse(model))) * aNormal;
-	 Position=vec3(model*vec4(aPos,1.0));// ÊÀ½ç¿Õ¼äµÄÎ»ÖÃ
+	 Position=vec3(model*vec4(aPos,1.0));// ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½Î»ï¿½ï¿½
 	 gl_Position = projection * view * model * vec4(aPos, 1.0);
 
 }

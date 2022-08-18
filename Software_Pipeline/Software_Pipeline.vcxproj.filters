@@ -135,5 +135,9 @@
     <None Include="Shaders\Gbuffer\GeometryProcess.frag" />
     <None Include="Shaders\Gbuffer\LightingProcess.vert" />
     <None Include="Shaders\Gbuffer\LightingProcess.frag" />
+    <None Include="Shaders\PostProcess\SSAO.vert" />
+    <None Include="Shaders\PostProcess\SSAO.frag" />
+    <None Include="Shaders\PostProcess\SSAOblur.vert" />
+    <None Include="Shaders\PostProcess\SSAOblur.frag" />
   </ItemGroup>
 </Project>

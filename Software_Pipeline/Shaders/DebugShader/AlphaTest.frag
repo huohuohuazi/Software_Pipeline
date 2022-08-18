@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 out vec4 FragColor;
 
 in vec2 TexCoords;
@@ -9,6 +9,6 @@ void main()
 {    
     vec4 texColor = texture(texture1, TexCoords);
     //if(texColor.a<0.1)
-        //discard;//ÉáÆú¸ÃÆ¬Ôª£¬±£Ö¤Æ¬¶Î²»½øÐÐÏÂÒ»²½´¦Àí£¨²»½øÈëÑÕÉ«»º³å£©
+        //discard;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¬Ôªï¿½ï¿½ï¿½ï¿½Ö¤Æ¬ï¿½Î²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½ï¿½å£©
     FragColor = texColor;
 }

@@ -5,6 +5,7 @@
     #include <iostream>
     #include <stdio.h>
     #include <fstream>
+    #include <random>
 
     using namespace std;
 
@@ -49,7 +50,8 @@
     unsigned int CreateEmptyTexture(bool HDR);
     unsigned int CreateDepthFrameTexture();
     unsigned int LoadCubeTexture(vector<string> textures_faces);
-    unsigned int CreateDepthCubeTexture();
+    unsigned int CreateDepthCubeTexture(); 
+    unsigned int lerp(GLfloat a, GLfloat b, GLfloat f);
 
 #pragma endregion
 
@@ -91,6 +93,8 @@
     GLboolean shadows = true;// 是否开启阴影
     bool on_HDR = true;// 是否使用HDR缓冲纹理
     bool On_Bloom = true;/// 是否开启Bloom泛光
+    bool On_SSAO = true;// 是否使用SSAO
+
 
     #define GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX 0x9048
     #define GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX 0x9049
@@ -369,7 +373,6 @@ int main(int argc, char* argv[])
 
 #pragma endregion
 
-
     #pragma region Unifrom块
 
         // VP矩阵
@@ -383,7 +386,6 @@ int main(int argc, char* argv[])
 
 
     #pragma endregion
-
 
     #pragma region FBO
 
@@ -459,7 +461,7 @@ int main(int argc, char* argv[])
 
             // BloomFBO
             // 用于多次迭代后处理缓冲，Bloom使用垂直与水平方向交替处理，共需要32+32次后处理
-            unsigned BloomFBO[2];
+            unsigned int BloomFBO[2];
             glGenFramebuffers(2, BloomFBO);
 
             unsigned BloomCBO[2];
@@ -475,13 +477,49 @@ int main(int argc, char* argv[])
         #pragma endregion
 
 
+        #pragma region SSAOFBO
+
+            // SSAOshader
+            unsigned int ssaoFBO;
+            glGenFramebuffers(1, &ssaoFBO);
+            glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
+
+            // 这里和Gbuffer.SSAOBuffer完全一样
+            unsigned int ssaoCBO;
+            glGenTextures(1, &ssaoCBO);
+            glBindTexture(GL_TEXTURE_2D, ssaoCBO);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, Width, Height, 0, GL_RGB, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoCBO, 0);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            // SSAOblurShader
+            unsigned int SSAOblurFBO;
+            glGenFramebuffers(1,&SSAOblurFBO);
+            glBindFramebuffer(GL_FRAMEBUFFER, SSAOblurFBO);
+
+            // 这里和SSAOBuffer完全一样
+            unsigned int SSAOblurCBO;
+            glGenTextures(1, &SSAOblurCBO);
+            glBindTexture(GL_TEXTURE_2D, SSAOblurCBO);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, Width, Height, 0, GL_RGB, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSAOblurCBO, 0);
+            
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        #pragma endregion
+
+
         // Gbuffer
         GBuffer gbuffer;  
 
     #pragma endregion
 
     
-
 
     #pragma region 加载Shader
 
@@ -502,6 +540,8 @@ int main(int argc, char* argv[])
         // 后处理
         Shader PostShader("Shaders/PostProcess/PostProcess.vert", "Shaders/PostProcess/PostProcess.frag");
         Shader BloomShader("Shaders/PostProcess/Bloom.vert", "Shaders/PostProcess/Bloom.frag");
+        Shader SSAOShader("Shaders/PostProcess/SSAO.vert", "Shaders/PostProcess/SSAO.frag");
+        Shader SSAOblurShader("Shaders/PostProcess/SSAOblur.vert", "Shaders/PostProcess/SSAOblur.frag");
 
 
         // 模型（无光照）
@@ -530,7 +570,7 @@ int main(int argc, char* argv[])
         // GBuffer
         Shader GBufferGeometryShader("Shaders/Gbuffer/GeometryProcess.vert", "Shaders/Gbuffer/GeometryProcess.frag");
         Shader GBufferLightingShader("Shaders/Gbuffer/LightingProcess.vert", "Shaders/Gbuffer/LightingProcess.frag");
-        
+
 
     #pragma endregion
 
@@ -567,10 +607,33 @@ int main(int argc, char* argv[])
         PostShader.use();
         PostShader.setInt("screenTexture", 0);
         PostShader.setInt("bloomTexture", 1);
+        PostShader.setInt("DebugTexture", 2);
+
 
         BloomShader.use();
         BloomShader.setInt("lightTexture", 0); 
 
+        SSAOShader.use();
+        SSAOShader.setInt("viewPosition", 0);
+        SSAOShader.setInt("viewNormal", 1);
+        SSAOShader.setInt("aTexNoise", 2);
+        // SSAOShader.setInt("gSSAOvalue", 3);
+
+        SSAOblurShader.use();
+        SSAOblurShader.setInt("gSSAO", 0);
+
+
+        // Gbuffer
+        GBufferGeometryShader.use();
+        GBufferGeometryShader.setInt("texture_diffuse1", 0);
+
+        // GBuffer光照阶段，输入三个缓冲
+        GBufferLightingShader.use();
+        GBufferLightingShader.setInt("gPositionDepth", 0);
+        GBufferLightingShader.setInt("gNormal", 1);
+        GBufferLightingShader.setInt("gAlbedoSpec", 2);
+        GBufferLightingShader.setInt("gSSAO_blur", 3);
+        GBufferLightingShader.setInt("depthMap", 4);
 
         // 阴影Shader
         //ShadowShader.use();
@@ -600,24 +663,14 @@ int main(int argc, char* argv[])
         //BlingPhongShader.use();
         //BlingPhongShader.setInt("texture_diffuse1", 0);
 
-        // Gbuffer
-        GBufferGeometryShader.use();
-        GBufferGeometryShader.setInt("texture_diffuse1", 0);
-        // GBuffer光照阶段，输入三个缓冲
-        GBufferLightingShader.use();
-        GBufferLightingShader.setInt("gPosition", 0);
-        GBufferLightingShader.setInt("gNormal", 1);
-        GBufferLightingShader.setInt("gAlbedoSpec", 2);
-        GBufferLightingShader.setInt("depthMap", 3); 
         
 
     #pragma endregion
 
 
-
     #pragma region 模型信息
         
-           // Model human("resources/objects/nanosuit/nanosuit.obj");
+          //Model human("resources/objects/nanosuit/nanosuit.obj");
           Model ball("resources/objects/ball.obj");
            // Model planet("resources/objects/planet/planet.obj");
         
@@ -954,6 +1007,52 @@ int main(int argc, char* argv[])
     #pragma endregion
         */
     
+        #pragma region SSAO
+
+             // ssaoKernel包括64个随机方向
+            
+             // uniform_real_distribution在<random.h>里
+             // uniform_real_distribution : 随机数分布
+             // default_random_engine : 迭代器
+             std::uniform_real_distribution<float> randomFloats(0.0, 1.0); // 随机浮点数，范围0.0 - 1.0
+             std::default_random_engine generator;
+             std::vector<glm::vec3> ssaoKernel; // Kernel
+             for (unsigned int i = 0; i < 64; ++i)
+             {
+                 // x=(-1,1) y=(-1,1) z=(0,1)
+                 // 半球形的采样区域
+                 glm::vec3 sample(randomFloats(generator) * 2.0 - 1.0, randomFloats(generator) * 2.0 - 1.0, randomFloats(generator));
+                 sample = glm::normalize(sample);
+                 sample *= randomFloats(generator);
+                 unsigned int scale = float(i) / 64.0;
+                 // 使得scale的分布更集中于中心区域
+                 scale = lerp(0.1f, 1.0f, scale * scale);
+                 sample *= scale;
+                 ssaoKernel.push_back(sample);
+             }
+
+             // 噪声纹理 4 * 4
+             std::vector<glm::vec3> ssaoNoise;
+             for (unsigned int i = 0; i < 16; i++)
+             {
+                 // 随机方向
+                 glm::vec3 noise(randomFloats(generator) * 2.0 - 1.0, randomFloats(generator) * 2.0 - 1.0, 0.0f);
+                 ssaoNoise.push_back(noise);
+             }
+
+
+             unsigned int noiseTexture; 
+             glGenTextures(1, &noiseTexture);
+             glBindTexture(GL_TEXTURE_2D, noiseTexture);
+             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+             glBindTexture(GL_TEXTURE_2D, 0);
+
+        #pragma endregion
+
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
            
@@ -987,7 +1086,7 @@ int main(int argc, char* argv[])
                 glDisable(GL_FRAMEBUFFER_SRGB);
             }*/
 
-            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             glEnable(GL_DEPTH_TEST);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
@@ -1055,7 +1154,6 @@ int main(int argc, char* argv[])
 
             // floor
             glm::mat4 model = glm::mat4(1.0f);
-            //model = glm::translate(model, glm::vec3(0, -1, 0));
             cubeShadowMapShader.setMat4("model", model);
             glBindVertexArray(planeVAO);
             glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -1077,6 +1175,13 @@ int main(int argc, char* argv[])
             glBindVertexArray(cubeVAO);
             glDrawArrays(GL_TRIANGLES, 0, 36);
             
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0));
+            model = glm::scale(model, glm::vec3(0.1f));
+            cubeShadowMapShader.setMat4("model", model);
+            //human.Draw(cubeShadowMapShader);
+
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             
@@ -1101,25 +1206,23 @@ int main(int argc, char* argv[])
             glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
         #pragma endregion
-
-           
-            // 返回相机空间
-            glViewport(0, 0, Width, Height);
-            glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+      
+        // 返回相机空间
+        glViewport(0, 0, Width, Height);
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-        #pragma region Pass2 : 渲染物体与阴影
+        #pragma region Pass2 : 阴影渲染
 
             #pragma region GBuffer几何阶段
 
                     glBindFramebuffer(GL_FRAMEBUFFER, gbuffer.gBuffer);
                     // 之后的Buffer都会输出到GBuffer对象上
                     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                    glEnable(GL_DEPTH_TEST);
 
                     GBufferGeometryShader.use();
-
                     GBufferGeometryShader.setMat4("projection", projection);
                     GBufferGeometryShader.setMat4("view", view);
 
@@ -1148,6 +1251,13 @@ int main(int argc, char* argv[])
                     glBindVertexArray(cubeVAO);
                     glDrawArrays(GL_TRIANGLES, 0, 36);
 
+                    model = glm::mat4(1.0f);
+                    model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0));
+                    model = glm::scale(model, glm::vec3(0.1f));
+                    GBufferGeometryShader.setMat4("model", model);
+                    //human.Draw(GBufferGeometryShader);
+
+
             #pragma endregion
 
                     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1160,13 +1270,70 @@ int main(int argc, char* argv[])
 
             #pragma region GBuffer光照阶段
 
-                    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-                    glClear(GL_COLOR_BUFFER_BIT);
+                // 这里都是后处理
 
+                #pragma region SSAO
+
+                    // 生成阶段
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
+                    // 其实相当于后处理，因此先禁用深度测试
                     glDisable(GL_DEPTH_TEST);
 
+                    SSAOShader.use();
+                    // 输入kernel以及采样值
+                    for (unsigned int i = 0; i < 64; ++i)
+                        SSAOShader.setVec3("samples[" + std::to_string(i) + "]", ssaoKernel[i]);
+                    SSAOShader.setMat4("projection", projection);
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, gbuffer.viewPosition); // PositionCBO是RGBA纹理
+                    glActiveTexture(GL_TEXTURE1);
+                    glBindTexture(GL_TEXTURE_2D, gbuffer.viewNormal);
+                    glActiveTexture(GL_TEXTURE2);
+                    glBindTexture(GL_TEXTURE_2D, noiseTexture);
+
+                    glBindVertexArray(screenVAO);
+                    glDrawArrays(GL_TRIANGLES, 0, 6);
+                    // 结果将输出到gbuffer.ssaoCBO上
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+                    
+                    // 模糊处理
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, SSAOblurFBO);
+                    glClear(GL_COLOR_BUFFER_BIT);
+
+                    SSAOblurShader.use();
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, ssaoCBO);
+
+                    glBindVertexArray(screenVAO);
+                    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+                #pragma endregion
+
+                #pragma region 混合阶段
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+                    //glClear(GL_COLOR_BUFFER_BIT);
+
+                    const float linear = 0.09f;
+                    const float quadratic = 0.032f;
+                    //glm::vec3 lightColor = glm::vec3(0.2, 0.2, 0.7);
+                    glm::vec3 lightColor = glm::vec3(0.4);
                     GBufferLightingShader.use();
-                    GBufferLightingShader.setVec3("lights.lightPos", lightPos);
+                    GBufferLightingShader.setVec3("lightPos", lightPos);
+                    GBufferLightingShader.setVec3("lightColor", lightColor);
+                    GBufferLightingShader.setFloat("light.Linear", linear);
+                    GBufferLightingShader.setFloat("light.Quadratic", quadratic);
+
+
+
                     //GBufferLightingShader.setVec3("lightPos", lightPos);
                     GBufferLightingShader.setVec3("viewPos", camera.Position);
                     GBufferLightingShader.setBool("shadows", shadows);
@@ -1174,17 +1341,23 @@ int main(int argc, char* argv[])
 
 
                     glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, gbuffer.PositionCBO);
+                    glBindTexture(GL_TEXTURE_2D, gbuffer.PositionDepthCBO);
                     glActiveTexture(GL_TEXTURE1);
                     glBindTexture(GL_TEXTURE_2D, gbuffer.NormalCBO);
                     glActiveTexture(GL_TEXTURE2);
                     glBindTexture(GL_TEXTURE_2D, gbuffer.ColorAndSpecularCBO);
                     glActiveTexture(GL_TEXTURE3);
+                    glBindTexture(GL_TEXTURE_2D, ssaoCBO);
+                    glActiveTexture(GL_TEXTURE4);
                     glBindTexture(GL_TEXTURE_CUBE_MAP, cubeDepthMap);
 
                     glBindVertexArray(screenVAO);
                     glDrawArrays(GL_TRIANGLES, 0, 6);
 
+
+                #pragma endregion
+
+                    // glBindFramebuffer(GL_FRAMEBUFFER, FBO);
                     glEnable(GL_DEPTH_TEST);
 
             #pragma region ShadowDebug
@@ -1222,10 +1395,7 @@ int main(int argc, char* argv[])
 
             #pragma endregion
 
-        #pragma endregion
-  
-            
-
+        #pragma endregion    
             
 
         #pragma region 绘制光源
@@ -1299,7 +1469,7 @@ int main(int argc, char* argv[])
                 glActiveTexture(GL_TEXTURE0);
                 glBindVertexArray(reflectioncubeVAO); 
                 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(4.0f, 0.0f, 0.0f));
+                model = glm::translate(model, glm::vec3(4.0f, 2.0f, 0.0f));
                 ReflectionShader.setMat4("model", model);
                 ReflectionShader.setVec3("cameraPos", camera.Position);
                 glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
@@ -1311,7 +1481,7 @@ int main(int argc, char* argv[])
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
                 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0f));
+                model = glm::translate(model, glm::vec3(2.0f, 2.0f, 0.0f));
                 RefractionShader.setMat4("model", model);
                 RefractionShader.setVec3("cameraPos", camera.Position);
                 glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -1326,44 +1496,48 @@ int main(int argc, char* argv[])
 
             if (On_OtherObject)
             {
-            //    // STEP : 1  :  pass1，绘制本体
-            //    DrawOutline(outlineShader, 1, scale);
+                // STEP : 1  :  pass1，绘制本体
+                DrawOutline(outlineShader, 1, scale);
 
-            //    // cubes
-            //    cubeShader.use();
-            //    glBindVertexArray(cubeVAO);
-            //    glBindTexture(GL_TEXTURE_2D, cubeTexture);
-            //    // cube1
-            //    model = glm::mat4(1.0f);
-            //    model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
-            //    cubeShader.setMat4("model", model);
-            //    glDrawArrays(GL_TRIANGLES, 0, 36);
-            //    // cube2
-            //    model = glm::mat4(1.0f);
-            //    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-            //    cubeShader.setMat4("model", model);
-            //    glDrawArrays(GL_TRIANGLES, 0, 36);
+                // cubes
+                cubeShader.use();
+                glBindVertexArray(cubeVAO);
+                glBindTexture(GL_TEXTURE_2D, cubeTexture);
+                // cube1
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(8.0f, 0.0f, 0.0f));
+                model = glm::scale(model, glm::vec3(0.2,0.2,0.2));
+                cubeShader.setMat4("model", model);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                // cube2
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(8.5f, 2.0f, 0.0f));
+                model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
+                cubeShader.setMat4("model", model);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
-            //    // STEP : 2  :  pass2，扩张描边
-            //    DrawOutline(outlineShader, 2, scale, 1.1);
-            //    // cubes
-            //    glBindVertexArray(cubeVAO);
-            //    // cube1
-            //    model = glm::mat4(1.0f);
-            //    model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 0.0f));
-            //    model = glm::scale(model, glm::vec3(scale, scale, scale));
-            //    outlineShader.setMat4("model", model);
-            //    glDrawArrays(GL_TRIANGLES, 0, 36);
-            //    // cube2
-            //    model = glm::mat4(1.0f);
-            //    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-            //    model = glm::scale(model, glm::vec3(scale, scale, scale));
-            //    outlineShader.setMat4("model", model);
-            //    glDrawArrays(GL_TRIANGLES, 0, 36);
+                // STEP : 2  :  pass2，扩张描边
+                DrawOutline(outlineShader, 2, scale, 1.1);
+                // cubes
+                glBindVertexArray(cubeVAO);
+                // cube1
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(8.0f, 0.0f, 0.0f));
+                model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
+                model = glm::scale(model, glm::vec3(scale, scale, scale));
+                outlineShader.setMat4("model", model);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                // cube2
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(8.5f, 2.0f, 0.0f));
+                model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
+                model = glm::scale(model, glm::vec3(scale, scale, scale));
+                outlineShader.setMat4("model", model);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
 
-            //    // STEP : 3  :  恢复状态，绘制天空盒与其他物体
-            //    DrawOutline(outlineShader, 3, scale);
+                // STEP : 3  :  恢复状态，绘制天空盒与其他物体
+                DrawOutline(outlineShader, 3, scale);
             }
             // DrawOutline(outlineShader, 3, scale);
             
@@ -1425,9 +1599,7 @@ int main(int argc, char* argv[])
                 //glBindVertexArray(0);
             }
             
-        #pragma endregion
-
-        
+        #pragma endregion      
 
         #pragma region 后处理
         
@@ -1490,6 +1662,11 @@ int main(int argc, char* argv[])
                 PostShader.setBool("On_Bloom", On_Bloom);
                 PostShader.setFloat("exposure", exposure);
                 PostShader.setBool("hdr", on_HDR);
+
+                PostShader.setBool("Debug", false);
+                glActiveTexture(GL_TEXTURE2);
+                glBindTexture(GL_TEXTURE_2D, gbuffer.viewPosition);
+
                 glDrawArrays(GL_TRIANGLES, 0, 6);
                 glEnable(GL_DEPTH_TEST);
 
@@ -1549,17 +1726,12 @@ unsigned int LoadTexture(char const* path)
                 format = GL_RGBA;
 
             glBindTexture(GL_TEXTURE_2D, textureID);
-
             glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 
-
             glGenerateMipmap(GL_TEXTURE_2D);// 生成mipmap
-
-            // 纹理Repeat的bug，当为透明材质时，边缘处理仍然为进行插值，导致有半透明框，因此要改变repeart策略
-           
+            // 纹理Repeat的bug，当为透明材质时，边缘处理仍然为进行插值，导致有半透明框，因此要改变repeart策略  
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-
             
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -1809,3 +1981,8 @@ void DrawOutline(Shader ourlineShader, int step, float& scale, float targetScale
     }
 }
 
+// 插值函数
+unsigned int lerp(GLfloat a, GLfloat b, GLfloat f)
+{
+    return a + f * (b - a);
+}

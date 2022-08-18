@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 in vec3 Normal;
 in vec3 Position;
@@ -10,10 +10,10 @@ uniform vec3 cameraPos;
 
 void main()
 {
-    // ÊÓ½Ç·½Ïò
+    // ï¿½Ó½Ç·ï¿½ï¿½ï¿½
     vec3 view_diretion = normalize(Position - cameraPos);
-    // ·´Éä·½Ïò
+    // ï¿½ï¿½ï¿½ä·½ï¿½ï¿½
     vec3 relfect_dirction = reflect(view_diretion, normalize(Normal));
-    // ÏñÌì¿ÕºÐ²ÉÑù
+    // ï¿½ï¿½ï¿½ï¿½ÕºÐ²ï¿½ï¿½ï¿½
     FragColor = vec4(texture(skybox, relfect_dirction).rgb, 1.0);
 }

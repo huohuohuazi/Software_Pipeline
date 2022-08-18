@@ -1,9 +1,9 @@
-#version 330 core
+#version 430 core
 layout (location = 0) in vec3 aPos;
 
-uniform mat4 model;//M¾ØÕó
-uniform mat4 view;//V¾ØÕó
-uniform mat4 projection;//P¾ØÕó
+uniform mat4 model;//Mï¿½ï¿½ï¿½ï¿½
+uniform mat4 view;//Vï¿½ï¿½ï¿½ï¿½
+uniform mat4 projection;//Pï¿½ï¿½ï¿½ï¿½
 
 void main()
 {

@@ -227,6 +227,10 @@
     <None Include="Shaders\directionalLight.vert" />
     <None Include="Shaders\Lighting\Bling_Phong.frag" />
     <None Include="Shaders\Lighting\Bling_Phong.vert" />
+    <None Include="Shaders\PostProcess\SSAO.frag" />
+    <None Include="Shaders\PostProcess\SSAO.vert" />
+    <None Include="Shaders\PostProcess\SSAOblur.frag" />
+    <None Include="Shaders\PostProcess\SSAOblur.vert" />
     <None Include="Shaders\Shadow\cubeShadowMap.frag" />
     <None Include="Shaders\Shadow\cubeShadowMap.geom" />
     <None Include="Shaders\Shadow\cubeShadowMap.vert" />

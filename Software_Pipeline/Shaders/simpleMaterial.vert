@@ -1,5 +1,5 @@
-// 不用改（
-#version 330 core
+// 锟斤拷锟矫改ｏ拷
+#version 430 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 
@@ -12,10 +12,10 @@ uniform mat4 projection;
 
 void main()
 {
-    // 顶点位置
+    // 锟斤拷锟斤拷位锟斤拷
     FragPos = vec3(model * vec4(aPos, 1.0));
-    // 顶点法线
+    // 锟斤拷锟姐法锟斤拷
     Normal = mat3(transpose(inverse(model))) * aNormal;  
-    // 于观察空间的位置
+    // 锟节观诧拷占锟斤拷位锟斤拷
     gl_Position = projection * view * vec4(FragPos, 1.0);
 }

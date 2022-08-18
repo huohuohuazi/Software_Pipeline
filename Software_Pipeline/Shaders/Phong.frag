@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 out vec4 FragColor;
 
 in vec3 Normal;  
@@ -11,22 +11,22 @@ uniform vec3 objectColor;
 
 void main()
 {
-    // ambientÏî
+    // ambientï¿½ï¿½
     float ambientStrength = 0.1;
-    vec3 ambient = ambientStrength * lightColor;// »·¾³¹âÇ¿*µÆ¹âÑÕÉ«
+    vec3 ambient = ambientStrength * lightColor;// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿*ï¿½Æ¹ï¿½ï¿½ï¿½É«
   	
-    // diffuseÏî
+    // diffuseï¿½ï¿½
     vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(lightPos - FragPos);// ÕâÀïÐ¡¸ÄÒ»ÏÂ£¬ÓÃ°ëlambertÄ£ÐÍ
+    vec3 lightDir = normalize(lightPos - FragPos);// ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½Ò»ï¿½Â£ï¿½ï¿½Ã°ï¿½lambertÄ£ï¿½ï¿½
     float diff = max(dot(norm, lightDir)*0.5+0.5, 0.0);
-    vec3 diffuse = diff * lightColor;// Âþ·´Éä¹âÇ¿*µÆ¹âÑÕÉ«
+    vec3 diffuse = diff * lightColor;// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿*ï¿½Æ¹ï¿½ï¿½ï¿½É«
     
-    // specularÏî
+    // specularï¿½ï¿½
     float specularStrength = 0.5; 
-    vec3 viewDir = normalize(viewPos - FragPos);// ÊÓ½Ç·½Ïò
-    vec3 reflectDir = reflect(-lightDir, norm); // ¸ß¹â·´Éä·½Ïò
+    vec3 viewDir = normalize(viewPos - FragPos);// ï¿½Ó½Ç·ï¿½ï¿½ï¿½
+    vec3 reflectDir = reflect(-lightDir, norm); // ï¿½ß¹â·´ï¿½ä·½ï¿½ï¿½
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
-    vec3 specular = specularStrength * spec * lightColor; // ¸ß¹â·´Éä·¶Î§*¹âÇ¿*µÆ¹âÑÕÉ«
+    vec3 specular = specularStrength * spec * lightColor; // ï¿½ß¹â·´ï¿½ä·¶Î§*ï¿½ï¿½Ç¿*ï¿½Æ¹ï¿½ï¿½ï¿½É«
         
     vec3 result = (ambient + diffuse + specular) * objectColor;
     FragColor = vec4(result, 1.0);

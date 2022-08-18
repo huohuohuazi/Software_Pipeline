@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 uniform sampler2D texture1;
 uniform sampler2D texture2;
@@ -8,6 +8,6 @@ out vec4 FragColor;
 
 void main()
 {
-	// ÎÆÀí²ÉÑù
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	FragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.2);
 }

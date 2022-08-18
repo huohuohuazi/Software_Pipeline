@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 layout (std140,binding = 2) uniform PointLightinfo
 {
@@ -22,25 +22,25 @@ uniform vec3 cameraPos;
  
 void main()
 {
-    // »ù´¡É«
+    // ï¿½ï¿½ï¿½ï¿½É«
     vec3 color = texture(texture_diffuse1, frag_in.TexCoords).rgb;
 
 
-    // ambientÏî
-    vec3 ambient = K_ambient * color;// »·¾³¹âÇ¿*µÆ¹âÑÕÉ«
+    // ambientï¿½ï¿½
+    vec3 ambient = K_ambient * color;// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿*ï¿½Æ¹ï¿½ï¿½ï¿½É«
   	
 
-    // diffuseÏî
+    // diffuseï¿½ï¿½
     vec3 normal = normalize(frag_in.Normal);
     vec3 lightDir = normalize(lightPos - frag_in.FragPos);
     float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * color;// Âþ·´Éä¹âÇ¿*µÆ¹âÑÕÉ«
+    vec3 diffuse = diff * color;// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿*ï¿½Æ¹ï¿½ï¿½ï¿½É«
     
 
 
-    // specularÏî
-    vec3 viewDir = normalize(cameraPos - frag_in.FragPos);// ÊÓ½Ç·½Ïò
-    vec3 reflectDir = reflect(-lightDir, normal); // ¸ß¹â·´Éä·½Ïò
+    // specularï¿½ï¿½
+    vec3 viewDir = normalize(cameraPos - frag_in.FragPos);// ï¿½Ó½Ç·ï¿½ï¿½ï¿½
+    vec3 reflectDir = reflect(-lightDir, normal); // ï¿½ß¹â·´ï¿½ä·½ï¿½ï¿½
     float spec=0;
     if(IsBlinnPhong)
     {

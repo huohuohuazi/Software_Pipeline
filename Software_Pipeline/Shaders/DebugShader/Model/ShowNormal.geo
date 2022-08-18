@@ -1,9 +1,9 @@
-#version 330 core
+#version 430 core
 
 
 layout (triangles) in;
 layout (line_strip, max_vertices = 6) out;
-// ´«µÝ¼¯ºÏ×ÅÉ«Æ÷
+// ï¿½ï¿½ï¿½Ý¼ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½
 
 uniform mat4 projection;
 
@@ -12,7 +12,7 @@ in v2g_Struct{
 }v2g_in[];
 
 
-const float MAGNITUDE = 0.02;// Ïß¶Î³¤¶È£¿
+const float MAGNITUDE = 0.02;// ï¿½ß¶Î³ï¿½ï¿½È£ï¿½
 
 
 void GenerateLine(int index)
@@ -28,7 +28,7 @@ void GenerateLine(int index)
 
 
 void main() {    
-    GenerateLine(0); // µÚÒ»¸ö¶¥µã·¨Ïß
-    GenerateLine(1); // µÚ¶þ¸ö¶¥µã·¨Ïß
-    GenerateLine(2); // µÚÈý¸ö¶¥µã·¨Ïß
+    GenerateLine(0); // ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ã·¨ï¿½ï¿½
+    GenerateLine(1); // ï¿½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã·¨ï¿½ï¿½
+    GenerateLine(2); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã·¨ï¿½ï¿½
 }

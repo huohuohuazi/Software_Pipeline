@@ -1,10 +1,10 @@
-#version 330 core
+#version 430 core
 layout (location = 0) in vec3 aPos;
 
 uniform mat4 model;
 
 void main()
 {
-    // Ö»±ä»»µ½ÊÀ½ç¿Õ¼ä×ø±ê
+    // Ö»ï¿½ä»»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½
     gl_Position =  model * vec4(aPos, 1.0f);
 }

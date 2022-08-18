@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 
@@ -11,10 +11,10 @@ uniform mat4 projection;
 
 void main()
 {
-    // ¶¥µãÎ»ÖÃ
+    // ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
     FragPos = vec3(model * vec4(aPos, 1.0));
-    // ¶¥µã·¨Ïß
+    // ï¿½ï¿½ï¿½ã·¨ï¿½ï¿½
     Normal = mat3(transpose(inverse(model))) * aNormal;  
-    // ÓÚ¹Û²ì¿Õ¼äµÄÎ»ÖÃ
+    // ï¿½Ú¹Û²ï¿½Õ¼ï¿½ï¿½Î»ï¿½ï¿½
     gl_Position = projection * view * vec4(FragPos, 1.0);
 }

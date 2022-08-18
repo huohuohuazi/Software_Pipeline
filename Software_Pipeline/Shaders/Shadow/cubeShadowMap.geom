@@ -1,25 +1,25 @@
-#version 330 core
-layout (triangles) in;// ¶ÔÓÚÃ¿¸öÆ¬Ôª£¬·Ö±ğ±£´æÁùÕÅÌùÍ¼
+#version 430 core
+layout (triangles) in;// ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Æ¬Ôªï¿½ï¿½ï¿½Ö±ğ±£´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼
 layout (triangle_strip, max_vertices=18) out;
 
-// ÁùÃæµÄVP¾ØÕó
+// ï¿½ï¿½ï¿½ï¿½ï¿½VPï¿½ï¿½ï¿½ï¿½
 uniform mat4 lightSpaceMatrix[6];
 
 out vec4 FragPos; // FragPos from GS (output per emitvertex)
 
 void main()
 {
-    // Ã¿¸öÈı½ÇĞÎ²ÉÑùÁù´Î£¨Áù¸ö·½Ïò£©
+    // Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     for(int face = 0; face < 6; ++face)
     {
         gl_Layer = face;
-        // ¶ÔÓÚÈı½ÇĞÎµÄÃ¿¸ö¶¥µã£¬±£´æÆä¶ÔÓÚÁù¸öÃæµÄÎ»ÖÃĞÅÏ¢£¨ÔÚÆ¬Ôª×ÅÉ«Æ÷ÖĞ½«»á¹éÒ»»¯ÎªÉî¶È£©
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îµï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ã£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½Æ¬Ôªï¿½ï¿½É«ï¿½ï¿½ï¿½Ğ½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Îªï¿½ï¿½È£ï¿½
         for(int i = 0; i < 3; ++i)
         {
-            // FragPosÊÇÊÀ½ç¿Õ¼ä×ø±ê(M*aPos)
+            // FragPosï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½(M*aPos)
             FragPos = gl_in[i].gl_Position;
             gl_Position = lightSpaceMatrix[face] * FragPos;
-            EmitVertex();// EmitÒ»¸ö×ø±êÎªgl_PositionµÄ¶¥µã£¬·¢ËÍ¸øfrag_shader
+            EmitVertex();// EmitÒ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªgl_Positionï¿½Ä¶ï¿½ï¿½ã£¬ï¿½ï¿½ï¿½Í¸ï¿½frag_shader
         }    
         EndPrimitive();
     }

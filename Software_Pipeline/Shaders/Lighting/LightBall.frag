@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 layout (std140,binding = 2) uniform PointLightinfo
 {

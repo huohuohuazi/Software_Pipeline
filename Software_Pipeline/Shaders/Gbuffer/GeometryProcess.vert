@@ -1,13 +1,18 @@
-#version 330 core
+#version 430 core
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 normal;
 layout (location = 2) in vec2 texCoords;
 
 
 out VS_OUT {
-    vec3 FragPos;
-    vec3 Normal;
+    vec3 worldFragPos;
+    vec3 worldNormal;
     vec2 TexCoords;
+
+    vec3 viewFragPos;
+    vec3 viewNormal;
+
+
 } vert_out;
 
 uniform mat4 projection;
@@ -19,8 +24,13 @@ void main()
 {
     gl_Position = projection * view * model * vec4(position, 1.0f);
 
-    vert_out.FragPos = (model * vec4(position, 1.0)).xyz;// ÕâÀïÊÇÊÀ½ç¿Õ¼ä×ø±ê
-    vert_out.Normal = transpose(inverse(mat3(model))) * normal;
+    vert_out.worldFragPos = (model * vec4(position, 1.0)).xyz;// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½
+    vert_out.worldNormal = transpose(inverse(mat3(model))) * normal;
+
+    // ï¿½ï¿½ÎªSSAOÊ¹ï¿½ï¿½ï¿½Ó½Ç¿Õ¼ä£¬ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    vert_out.viewFragPos = (view*model * vec4(position, 1.0)).xyz;// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó½Ç¿Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½
+    vert_out.viewNormal = transpose(inverse(mat3(view*model))) * normal;
+
     vert_out.TexCoords = texCoords;
 
 }

@@ -8,11 +8,12 @@ class GBuffer
 {
 public:
 	unsigned int gBuffer;// FrameBuffer
-	unsigned int PositionCBO, NormalCBO, ColorAndSpecularCBO;// Color Buffer
+	unsigned int PositionDepthCBO, NormalCBO, ColorAndSpecularCBO;// Color Buffer
 	unsigned int RBO;// RenderBuffer = Depth (+ Stencil)
+	// 建议RBO和FBO的RBO统一
 
+	unsigned int viewPosition, viewNormal;
 
-public:
 	GBuffer()
 	{
 		// GBuffer FBO
@@ -24,25 +25,37 @@ public:
 		PositionBuffer();
 		NormalBuffer();
 		ColorAndSpecularBuffer();
+		SSAOBuffer();
 
-		unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-		glDrawBuffers(3, attachments);
+		//unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+		//glDrawBuffers(3, attachments);
+
+		unsigned int attachments[5] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 , GL_COLOR_ATTACHMENT4};
+		glDrawBuffers(5, attachments);
 
 		RenderBuffer();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	}
-	// 位置缓冲
+
+
+private:
+	// 位置缓冲CBO
 	void PositionBuffer()
 	{
-		glGenTextures(1, &PositionCBO);
-		glBindTexture(GL_TEXTURE_2D, PositionCBO);
+		glGenTextures(1, &PositionDepthCBO);
+		glBindTexture(GL_TEXTURE_2D, PositionDepthCBO);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Width, Height, 0, GL_RGB, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, PositionCBO, 0);
+
+		// GL_CLAMP_TO_EDGE的纹理封装方法，保证了我们不会不小心采样到在屏幕空间中纹理默认坐标区域之外的深度值
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, PositionDepthCBO, 0);
 	}
-	// 法线缓冲
+	// 法线缓冲CBO
 	void NormalBuffer()
 	{
 		glGenTextures(1, &NormalCBO);
@@ -52,7 +65,7 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, NormalCBO, 0);
 	}
-	// 折/反射与颜色缓冲
+	// 折/反射与颜色缓冲CBO
 	void ColorAndSpecularBuffer()
 	{
 		glGenTextures(1, &ColorAndSpecularCBO);
@@ -62,9 +75,44 @@ public:
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Width, Height, 0, GL_RGB, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, ColorAndSpecularCBO, 0);
 	}
-	// 深度缓冲
+	// SSAO的阴影缓冲CBO
+	void SSAOBuffer()
+	{
+		//glGenTextures(1, &ssaoCBO);
+		//glBindTexture(GL_TEXTURE_2D, ssaoCBO);
+		//// 是一个灰度图(但不是DepthComponent，不然记录的就是深度信息了)
+		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, Width, Height, 0, GL_RGB, GL_FLOAT, NULL);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, ssaoCBO, 0);
+
+
+		glGenTextures(1, &viewPosition);
+		glBindTexture(GL_TEXTURE_2D, viewPosition);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Width, Height, 0, GL_RGB, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		// GL_CLAMP_TO_EDGE的纹理封装方法，保证了我们不会不小心采样到在屏幕空间中纹理默认坐标区域之外的深度值
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, viewPosition, 0);
+
+
+		glGenTextures(1, &viewNormal);
+		glBindTexture(GL_TEXTURE_2D, viewNormal);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Width, Height, 0, GL_RGB, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, viewNormal, 0);
+
+
+	}
+
+	// 深度缓冲RBO
 	void RenderBuffer()
 	{
 		glGenRenderbuffers(1, &RBO);
@@ -80,7 +128,7 @@ public:
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			std::cout << "Framebuffer not complete!" << std::endl;
 	}
-
+	
 };
 
 #endif

@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 out vec4 FragColor;
 
 in VS_OUT {
@@ -14,7 +14,7 @@ uniform vec3 lightPos;
 uniform vec3 viewPos;
 
 uniform float far_plane;
-uniform bool shadows;// ÊÇ·ñ»æÖÆÒõÓ°
+uniform bool shadows;// ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó°
 
 vec3 sampleOffsetDirections[20] = vec3[](
    vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
@@ -25,41 +25,41 @@ vec3 sampleOffsetDirections[20] = vec3[](
 
 float ShadowCalculation(vec3 fragPos)
 {
-    // Æ¬Ôªµ½¹âÔ´ÏòÁ¿
+    // Æ¬Ôªï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½
     vec3 fragToLight = fragPos - lightPos; 
 
-    // ´ý±È½ÏµÄÆ¬ÔªµÄÉî¶È
+    // ï¿½ï¿½ï¿½È½Ïµï¿½Æ¬Ôªï¿½ï¿½ï¿½ï¿½ï¿½
     float currentDepth = length(fragToLight);
 
 
     // PCF
     //float bias = 0.05; 
-   // float shadow = 0.0;//ÒõÓ°Öµ
+   // float shadow = 0.0;//ï¿½ï¿½Ó°Öµ
     // float samples = 4.0;
     //float offset = 0.1;
 
-    // Èý¸öÎ¬¶ÈµÝÔö½Ç¶È
+    // ï¿½ï¿½ï¿½ï¿½Î¬ï¿½Èµï¿½ï¿½ï¿½ï¿½Ç¶ï¿½
     //for(float x = -offset; x < offset; x += offset / (samples * 0.5)){
         ///for(float y = -offset; y < offset; y += offset / (samples * 0.5)){
             //for(float z = -offset; z < offset; z += offset / (samples * 0.5)){
-                // ÓÃ·½ÏòÏòÁ¿ ²ÉÑù Á¢·½ÌåÉî¶ÈÌùÍ¼
+                // ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼
                 //float closestDepth = texture(depthMap, fragToLight + vec3(x, y, z)).r; 
-                // ÓÉÓÚ·½ÏòÊÇ¹éÒ»»¯µÄ£¬Òò´ËÒªÍ³Ò»
+                // ï¿½ï¿½ï¿½Ú·ï¿½ï¿½ï¿½ï¿½Ç¹ï¿½Ò»ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ÒªÍ³Ò»
                 //closestDepth *= far_plane; 
                 //if(currentDepth - bias > closestDepth)
                     //shadow += 1.0;
                 //} } }
     //shadow /= (samples * samples * samples);
 
-    // PCFÓÅ»¯£ºÊ¹ÓÃ20¸öÆ«ÒÆÁ¿´úÌæ64´Î²ÉÑù
+    // PCFï¿½Å»ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½20ï¿½ï¿½Æ«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½64ï¿½Î²ï¿½ï¿½ï¿½
     float shadow = 0.0;
     float bias = 0.15;
     int samples = 20;
 
     float viewDistance = length(viewPos - fragPos);
-    // Æ«ÒÆ°ë¾¶
+    // Æ«ï¿½Æ°ë¾¶
     // float diskRadius = 0.05;
-    //¸ù¾Ý¹Û²ìÕßµÄ¾àÀëÀ´Ôö¼ÓÆ«ÒÆ°ë¾¶ÁË
+    //ï¿½ï¿½ï¿½Ý¹Û²ï¿½ï¿½ßµÄ¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ«ï¿½Æ°ë¾¶ï¿½ï¿½
     float diskRadius = (1.0 + (viewDistance / far_plane)) / 25.0;
     for(int i = 0; i < samples; ++i)
     {
@@ -73,13 +73,13 @@ float ShadowCalculation(vec3 fragPos)
     return shadow;
 }
 
-// Debug£¬ÓÃÓÚ²é¿´shadwmapÓÐÃ»ÓÐÎÊÌâ
+// Debugï¿½ï¿½ï¿½ï¿½ï¿½Ú²é¿´shadwmapï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 vec4 DebugShowDepth(vec3 fragPos)
 {
-    // Æ¬Ôªµ½¹âÔ´ÏòÁ¿
+    // Æ¬Ôªï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½
     vec3 fragToLight = fragPos - lightPos; 
 
-    // ´ý±È½ÏµÄÆ¬ÔªµÄÉî¶È
+    // ï¿½ï¿½ï¿½È½Ïµï¿½Æ¬Ôªï¿½ï¿½ï¿½ï¿½ï¿½
     float closestDepth = texture(depthMap, fragToLight).r; 
     float currentDepth = length(fragToLight);
 
@@ -91,33 +91,33 @@ vec4 DebugShowDepth(vec3 fragPos)
 
 void main()
 {           
-    // µ×É«/ÎÆÀí
+    // ï¿½ï¿½É«/ï¿½ï¿½ï¿½ï¿½
     //vec3 color  =vec3(0.4);
     vec3 color = texture(texture_diffuse1, frag_in.TexCoords).rgb;
     vec3 normal = normalize(frag_in.Normal);
     vec3 lightColor = vec3(0.4);
-    // »·¾³¹â
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     vec3 ambient = 0.2 * color;
-    // Âþ·´Éä
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     vec3 lightDir = normalize(lightPos - frag_in.FragPos);
     float diff = max(dot(lightDir, normal), 0.0);
     vec3 diffuse = diff * lightColor;
-    // ¸ß¹â·´Éä(Blinn_Phong¹âÕÕÄ£ÐÍ)
+    // ï¿½ß¹â·´ï¿½ï¿½(Blinn_Phongï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½)
     vec3 viewDir = normalize(viewPos - frag_in.FragPos);
     float spec = 0.0;
     vec3 halfwayDir = normalize(lightDir + viewDir);  
     spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
     vec3 specular = spec * lightColor;    
-    // ÒõÓ°
-    float shadow = shadows ? ShadowCalculation(frag_in.FragPos) : 0.0;// ÊÇ·ñ¿ªÆôÒõÓ°                  
+    // ï¿½ï¿½Ó°
+    float shadow = shadows ? ShadowCalculation(frag_in.FragPos) : 0.0;// ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½Ó°                  
     shadow = min(shadow, 0.75);
 
-    // »·¾³¹â²»ÊÜÒõÓ°Ó°Ïì
+    // ï¿½ï¿½ï¿½ï¿½ï¿½â²»ï¿½ï¿½ï¿½ï¿½Ó°Ó°ï¿½ï¿½
     vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;
     
     FragColor = vec4(lighting, 1.0f);
 
-    // DebugÓÃ ÒõÓ°¶þÖµ»¯
+    // Debugï¿½ï¿½ ï¿½ï¿½Ó°ï¿½ï¿½Öµï¿½ï¿½
     //lighting=(1.0 - shadow)*vec3(1.0);
     //FragColor = DebugShowDepth(frag_in.FragPos);
 

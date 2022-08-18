@@ -1,6 +1,6 @@
-#version 330 core
+#version 430 core
 
-// ´«µÝ¼¯ºÏ×ÅÉ«Æ÷
+// ï¿½ï¿½ï¿½Ý¼ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½
 layout (points) in;
 layout (triangle_strip, max_vertices = 5) out;
 
@@ -9,25 +9,25 @@ in v2g_Struct
     vec3 color;
 }v2g_in[];
 
-out vec3 fcolor;// ´«µÝ¸øÆ¬Ôª×ÅÉ«Æ÷
+out vec3 fcolor;// ï¿½ï¿½ï¿½Ý¸ï¿½Æ¬Ôªï¿½ï¿½É«ï¿½ï¿½
 
 void build_house(vec4 position)
 {    
     fcolor=v2g_in[0].color;
-    // Éú³ÉÒ»¸ö£¨Èý½ÇÐÎ£©ÐÂ¶¥µã£¿
-    gl_Position = position + vec4(-0.2, -0.2, 0.0, 0.0);    // 1:×óÏÂ
+    // ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î£ï¿½ï¿½Â¶ï¿½ï¿½ã£¿
+    gl_Position = position + vec4(-0.2, -0.2, 0.0, 0.0);    // 1:ï¿½ï¿½ï¿½ï¿½
     EmitVertex();
 
-    gl_Position = position + vec4( 0.2, -0.2, 0.0, 0.0);    // 2:ÓÒÏÂ
+    gl_Position = position + vec4( 0.2, -0.2, 0.0, 0.0);    // 2:ï¿½ï¿½ï¿½ï¿½
     EmitVertex();
 
-    gl_Position = position + vec4(-0.2,  0.2, 0.0, 0.0);    // 3:×óÉÏ
+    gl_Position = position + vec4(-0.2,  0.2, 0.0, 0.0);    // 3:ï¿½ï¿½ï¿½ï¿½
     EmitVertex();
 
-    gl_Position = position + vec4( 0.2,  0.2, 0.0, 0.0);    // 4:ÓÒÉÏ
+    gl_Position = position + vec4( 0.2,  0.2, 0.0, 0.0);    // 4:ï¿½ï¿½ï¿½ï¿½
     EmitVertex();
 
-    gl_Position = position + vec4( 0.0,  0.4, 0.0, 0.0);    // 5:¶¥²¿
+    gl_Position = position + vec4( 0.0,  0.4, 0.0, 0.0);    // 5:ï¿½ï¿½ï¿½ï¿½
     fcolor=vec3(1.0,1.0,1.0);
     EmitVertex();
     

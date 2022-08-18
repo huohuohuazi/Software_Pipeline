@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 out vec4 FragColor;
 
 in VS_OUT {
@@ -14,44 +14,44 @@ uniform sampler2D shadowMap;
 uniform vec3 lightPos;
 uniform vec3 viewPos;
 
-uniform bool shadows;// ÊÇ·ñ»æÖÆÒõÓ°
+uniform bool shadows;// ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó°
 
 float ShadowCalculation(vec4 fragPosLightSpace)
 {
-    // ¹âÔ´µÄÍ¶Ó°¿Õ¼ä×ø±ê--¡·zÖá¹éÒ»»¯--¡·Æ¬ÔªÉî¶È£¬Éî¶ÈÔ½´ó Àë¹âÔ´Ô½Ô¶
+    // ï¿½ï¿½Ô´ï¿½ï¿½Í¶Ó°ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½--ï¿½ï¿½zï¿½ï¿½ï¿½Ò»ï¿½ï¿½--ï¿½ï¿½Æ¬Ôªï¿½ï¿½È£ï¿½ï¿½ï¿½ï¿½Ô½ï¿½ï¿½ ï¿½ï¿½ï¿½Ô´Ô½Ô¶
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    // NDC×ø±ê×ª»¯
+    // NDCï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½
     projCoords = projCoords * 0.5 + 0.5;
-    // »ñµÃ´ý±È½ÏÆ¬ÔªµÄÉî¶È
+    // ï¿½ï¿½Ã´ï¿½ï¿½È½ï¿½Æ¬Ôªï¿½ï¿½ï¿½ï¿½ï¿½
     float currentDepth = projCoords.z;
 
-    // ²ÉÑùÉî¶ÈÌùÍ¼£¬»ñÈ¡Àë¹âÔ´×î½üµãµÄÎ»ÖÃ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
     float closestDepth = texture(shadowMap, projCoords.xy).r; 
     
-    // »ñÈ¡bias
+    // ï¿½ï¿½È¡bias
     vec3 normal = normalize(frag_in.Normal);
     vec3 lightDir = normalize(lightPos - frag_in.FragPos);
     float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
     //float bias=0.05;
     
     // PCF
-    // Ë¼Â·ÊÇ¶ÔshadowMap¶à´Î²ÉÑùÈ¡Æ½¾ù
+    // Ë¼Â·ï¿½Ç¶ï¿½shadowMapï¿½ï¿½Î²ï¿½ï¿½ï¿½È¡Æ½ï¿½ï¿½
     float shadow = 0.0;
-    // textureSize(shadowMap, 0) £º 0¼¶mipmapµÄvec2ÀàÐÍµÄ¿íºÍ¸ß
+    // textureSize(shadowMap, 0) ï¿½ï¿½ 0ï¿½ï¿½mipmapï¿½ï¿½vec2ï¿½ï¿½ï¿½ÍµÄ¿ï¿½ï¿½Í¸ï¿½
     vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
     for(int x = -1; x <= 1; x++)
     {
         for(int y = -1; y <= 1; y++)
         {
-            // projCoords.xy + vec2(x, y) * texelSizeÊµÏÖtexcoord×ø±êÆ«ÒÆ£¬Ò²¾ÍÊÇÖÐÐÄ²ÉÑùµãÖÜÎ§¹²9¸öÏñËØµÄuv×ø±ê
+            // projCoords.xy + vec2(x, y) * texelSizeÊµï¿½ï¿½texcoordï¿½ï¿½ï¿½ï¿½Æ«ï¿½Æ£ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î§ï¿½ï¿½9ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½uvï¿½ï¿½ï¿½ï¿½
             float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r; 
-            // Èô Æ¬ÔªÉî¶È ´óÓÚ Éî¶ÈÌùÍ¼£¬ÔòËµÃ÷Æ¬ÔªÓë¹âÔ´Ö®¼äÓÐÎïÌå×èµ²£¬¸ÃÆ¬Ôª´¦ÓÚÒõÓ°ÖÐ
+            // ï¿½ï¿½ Æ¬Ôªï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½Æ¬Ôªï¿½ï¿½ï¿½Ô´Ö®ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½èµ²ï¿½ï¿½ï¿½ï¿½Æ¬Ôªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó°ï¿½ï¿½
             shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;        
         }    
     }
     shadow /= 9.0;
     
-    // Ïà»úÊÓÒ°ÍâµÄÄ¬ÈÏÎª·ÇÒõÓ°
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ò°ï¿½ï¿½ï¿½Ä¬ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½Ó°
     if(projCoords.z > 1.0)
         shadow = 0.0;
         
@@ -60,29 +60,29 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 
 void main()
 {           
-    // µ×É«/ÎÆÀí
+    // ï¿½ï¿½É«/ï¿½ï¿½ï¿½ï¿½
     vec3 color = texture(diffuseTexture, frag_in.TexCoords).rgb;
     vec3 normal = normalize(frag_in.Normal);
     vec3 lightColor = vec3(0.4);
-    // »·¾³¹â
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     vec3 ambient = 0.2 * color;
-    // Âþ·´Éä
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     vec3 lightDir = normalize(lightPos - frag_in.FragPos);
     float diff = max(dot(lightDir, normal), 0.0);
     vec3 diffuse = diff * lightColor;
-    // ¸ß¹â·´Éä(Blinn_Phong¹âÕÕÄ£ÐÍ)
+    // ï¿½ß¹â·´ï¿½ï¿½(Blinn_Phongï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½)
     vec3 viewDir = normalize(viewPos - frag_in.FragPos);
     float spec = 0.0;
     vec3 halfwayDir = normalize(lightDir + viewDir);  
     spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
     vec3 specular = spec * lightColor;    
-    // ÒõÓ°
-    float shadow = shadows ? ShadowCalculation(frag_in.FragPosLightSpace) : 0.0;// ÊÇ·ñ¿ªÆôÒõÓ°                  
+    // ï¿½ï¿½Ó°
+    float shadow = shadows ? ShadowCalculation(frag_in.FragPosLightSpace) : 0.0;// ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½Ó°                  
     shadow = min(shadow, 0.75);
 
-    // »·¾³¹â²»ÊÜÒõÓ°Ó°Ïì
+    // ï¿½ï¿½ï¿½ï¿½ï¿½â²»ï¿½ï¿½ï¿½ï¿½Ó°Ó°ï¿½ï¿½
     vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;    
-    // DebugÓÃ ÒõÓ°¶þÖµ»¯
+    // Debugï¿½ï¿½ ï¿½ï¿½Ó°ï¿½ï¿½Öµï¿½ï¿½
     // lighting=(1.0 - shadow)*vec3(1.0);
 
     FragColor = vec4(lighting, 1.0f);

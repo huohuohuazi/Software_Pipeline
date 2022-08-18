@@ -1,10 +1,10 @@
-#version 330 core
+#version 430 core
 
 layout (location = 0) in vec3 aPos;
 
 out vec3 TexCoords;
 
-// Ã»ÓÐM¾ØÕó
+// Ã»ï¿½ï¿½Mï¿½ï¿½ï¿½ï¿½
 uniform mat4 projection;
 uniform mat4 view;
 
@@ -13,7 +13,7 @@ void main()
     TexCoords = aPos;
     vec4 pos = projection * view * vec4(aPos, 1.0);
 
-    // ÒòÎªÌì¿ÕºÐµÄ´óÐ¡Ö»ÊÇ1*1*1£¬µ¼ÖÂ´ó¶àÊýÎïÌå¶¼ÔÚËüºóÃæ£¬Òò´ËÐèÒªÈÃ¼ÆËãºóµÄÉî¶ÈÖµºãµÈÓÚ1
-    // Í¸ÊÓ³ý·¨ÊµÔÚÆ¬¶Î×ÅÉ«Æ÷ºóÖ´ÐÐµÄ£¬(x,y,z /= w)£¬°ÑzÉèÖÃ³Éw¿ÉÒÔÈÃz·ÖÁ¿ºãÎª1
+    // ï¿½ï¿½Îªï¿½ï¿½ÕºÐµÄ´ï¿½Ð¡Ö»ï¿½ï¿½1*1*1ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å¶¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ£¬ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½Ã¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½1
+    // Í¸ï¿½Ó³ï¿½ï¿½ï¿½Êµï¿½ï¿½Æ¬ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ÐµÄ£ï¿½(x,y,z /= w)ï¿½ï¿½ï¿½ï¿½zï¿½ï¿½ï¿½Ã³ï¿½wï¿½ï¿½ï¿½ï¿½ï¿½ï¿½zï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª1
     gl_Position = pos.xyww;
 }

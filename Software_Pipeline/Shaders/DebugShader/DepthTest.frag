@@ -1,18 +1,18 @@
-#version 330 core
+#version 430 core
 out vec4 FragColor;
 
 in vec2 TexCoords;
 
 uniform sampler2D texture1;
 
-// ×î½üÓë×îÔ¶Î»ÖÃ
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶Î»ï¿½ï¿½
 float near = 0.1; 
 float far  = 100.0; 
 
-// ×ø±ê-->>>Éî¶È
+// ï¿½ï¿½ï¿½ï¿½-->>>ï¿½ï¿½ï¿½
 float LinearizeDepth(float depth) 
 {
-    float z = depth * 2.0 - 1.0; // NDC×ø±ê
+    float z = depth * 2.0 - 1.0; // NDCï¿½ï¿½ï¿½ï¿½
     // (0~1)-->(-1~1)
 
     // F(depth)=( 1/z - 1/near ) / (  1/far - 1/near )
