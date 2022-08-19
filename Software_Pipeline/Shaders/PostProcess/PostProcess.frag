@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 out vec4 FragColor;
 
 in vec2 TexCoords;
@@ -9,8 +9,8 @@ uniform bool hdr;
 uniform sampler2D screenTexture;
 uniform sampler2D bloomTexture;
 
-uniform bool On_GammaCorrection;// ÊÇ·ñ¿ªÆôGamma½ÃÕý
-uniform bool On_Bloom;// ÊÇ·ñ¿ªÆôBloom·º¹â
+uniform bool On_GammaCorrection;// ï¿½Ç·ï¿½ï¿½ï¿½Gammaï¿½ï¿½ï¿½ï¿½
+uniform bool On_Bloom;// ï¿½Ç·ï¿½ï¿½ï¿½Bloomï¿½ï¿½ï¿½ï¿½
 
 vec3 Conv(float kernel[9]);
 //vec4 Grayscale(vec4 color_in);
@@ -19,9 +19,9 @@ vec3 Conv(float kernel[9]);
 
 void main()
 { 
-    // »ñÈ¡µ±Ç°×ø±ê£º
+    // ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ê£º
     // if(gl_FragCoord.x<720)
-    // ¿ÉÒÔÓÃÓÚ¼¼ÊõÑÝÊ¾µÈ£¬½«»­Ãæ·Ö³ÉÁ½²¿·Ö£¬Í¬Ñù¿ÉÒÔÓÃÓÚÆäËû×ÅÉ«Æ÷µÄ²âÊÔ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½È£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö£ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
 
     FragColor = texture(screenTexture, TexCoords);
     if(On_Bloom)
@@ -31,10 +31,10 @@ void main()
     }
     
 
-    // ¿¼ÂÇHDR
+    // ï¿½ï¿½ï¿½ï¿½HDR
     FragColor.rgb = vec3(1.0) - exp(-FragColor.rgb * exposure);
 
-    // Gamma½ÃÕý
+    // Gammaï¿½ï¿½ï¿½ï¿½
     if(On_GammaCorrection)
     {
         float gamma = 2.2;
@@ -66,19 +66,19 @@ vec3 Blur()
 vec3 Conv(float kernel[9])
 {
     const float offset = 1.0 / 300.0;
-    // ±ßÔµ²ÉÑù¿ÉÄÜ»á³öÏÖÒòÎªÑ­»·±ß²ÉÑù¶ø²úÉúµÄÌõÎÆ£¬´ËÊ±¿ÉÒÔÉèÖÃÎÆÀí²ÉÑùÎª
-    // GL_CLAMP_TO_EDGE(ÖØ¸´²ÉÑù±ßÔµ)
+    // ï¿½ï¿½Ôµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÎªÑ­ï¿½ï¿½ï¿½ß²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª
+    // GL_CLAMP_TO_EDGE(ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôµ)
 
     vec2 offsets[9] = vec2[](
-        vec2(-offset,  offset), // ×óÉÏ
-        vec2( 0.0f,    offset), // ÕýÉÏ
-        vec2( offset,  offset), // ÓÒÉÏ
-        vec2(-offset,  0.0f),   // ×ó
-        vec2( 0.0f,    0.0f),   // ÖÐ
-        vec2( offset,  0.0f),   // ÓÒ
-        vec2(-offset, -offset), // ×óÏÂ
-        vec2( 0.0f,   -offset), // ÕýÏÂ
-        vec2( offset, -offset)  // ÓÒÏÂ
+        vec2(-offset,  offset), // ï¿½ï¿½ï¿½ï¿½
+        vec2( 0.0f,    offset), // ï¿½ï¿½ï¿½ï¿½
+        vec2( offset,  offset), // ï¿½ï¿½ï¿½ï¿½
+        vec2(-offset,  0.0f),   // ï¿½ï¿½
+        vec2( 0.0f,    0.0f),   // ï¿½ï¿½
+        vec2( offset,  0.0f),   // ï¿½ï¿½
+        vec2(-offset, -offset), // ï¿½ï¿½ï¿½ï¿½
+        vec2( 0.0f,   -offset), // ï¿½ï¿½ï¿½ï¿½
+        vec2( offset, -offset)  // ï¿½ï¿½ï¿½ï¿½
     );
 
     vec3 sampleTex[9];
@@ -86,7 +86,7 @@ vec3 Conv(float kernel[9])
     for(int i = 0; i < 9; i++)
     {
         //FragColor = texture(screenTexture, TexCoords);
-        // TexcoordsÊÇuv×ø±ê£¬½øÐÐ¶ÔÆ«ÒÆµÄÑÇÏñËØÖØÐÂ²ÉÑù
+        // Texcoordsï¿½ï¿½uvï¿½ï¿½ï¿½ê£¬ï¿½ï¿½ï¿½Ð¶ï¿½Æ«ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â²ï¿½ï¿½ï¿½
         sampleTex[i] = vec3(texture(screenTexture, TexCoords.st + offsets[i]));
     }
     vec3 result = vec3(0.0);
@@ -96,10 +96,10 @@ vec3 Conv(float kernel[9])
     return result;
 }
 
-// ±ßÔµ¼ì²â
+// ï¿½ï¿½Ôµï¿½ï¿½ï¿½
 vec3 EdgeDetect()
 {
-     // ¾í»ýºË¼ÆËã
+     // ï¿½ï¿½ï¿½ï¿½ï¿½Ë¼ï¿½ï¿½ï¿½
     float kernel[9] = float[](
         1, 1, 1,
         1, -8, 1,

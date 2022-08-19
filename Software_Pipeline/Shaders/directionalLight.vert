@@ -1,4 +1,4 @@
-
+#version 430 core
 
 struct Light {
     // 平行光不管位置，只看方向

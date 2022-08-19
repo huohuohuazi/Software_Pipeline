@@ -1,10 +1,10 @@
-#version 330 core
+#version 430 core
 layout (location = 0) in vec2 aPos;
 layout (location = 1) in vec2 aTexCoords;
 
 //out vec2 TexCoords;
 
-// ÓÃ½á¹¹Ìå´úÌæ
+// ï¿½Ã½á¹¹ï¿½ï¿½ï¿½ï¿½ï¿½
 out vec2 TexCoords;
 
 

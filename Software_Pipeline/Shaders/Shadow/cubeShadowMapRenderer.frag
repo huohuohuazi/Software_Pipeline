@@ -14,7 +14,7 @@ uniform vec3 lightPos;
 uniform vec3 viewPos;
 
 uniform float far_plane;
-uniform bool shadows;// �Ƿ������Ӱ
+uniform bool shadows;// �Ƿ�������?
 
 vec3 sampleOffsetDirections[20] = vec3[](
    vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
@@ -28,7 +28,7 @@ float ShadowCalculation(vec3 fragPos)
     // ƬԪ����Դ����
     vec3 fragToLight = fragPos - lightPos; 
 
-    // ���Ƚϵ�ƬԪ�����
+    // ���Ƚϵ�ƬԪ�����?
     float currentDepth = length(fragToLight);
 
 
@@ -42,9 +42,9 @@ float ShadowCalculation(vec3 fragPos)
     //for(float x = -offset; x < offset; x += offset / (samples * 0.5)){
         ///for(float y = -offset; y < offset; y += offset / (samples * 0.5)){
             //for(float z = -offset; z < offset; z += offset / (samples * 0.5)){
-                // �÷������� ���� �����������ͼ
+                // �÷������� ���� ������������?
                 //float closestDepth = texture(depthMap, fragToLight + vec3(x, y, z)).r; 
-                // ���ڷ����ǹ�һ���ģ����Ҫͳһ
+                // ���ڷ����ǹ�һ���ģ�����?ͳһ
                 //closestDepth *= far_plane; 
                 //if(currentDepth - bias > closestDepth)
                     //shadow += 1.0;
@@ -79,7 +79,7 @@ vec4 DebugShowDepth(vec3 fragPos)
     // ƬԪ����Դ����
     vec3 fragToLight = fragPos - lightPos; 
 
-    // ���Ƚϵ�ƬԪ�����
+    // ���Ƚϵ�ƬԪ�����?
     float closestDepth = texture(depthMap, fragToLight).r; 
     float currentDepth = length(fragToLight);
 
