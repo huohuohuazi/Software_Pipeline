@@ -194,6 +194,8 @@
     <None Include="Shaders\Lighting\LightBall.vert" />
     <None Include="Shaders\Lighting\PointLight.frag" />
     <None Include="Shaders\Lighting\PointLight.vert" />
+    <None Include="Shaders\PBR\pbr.frag" />
+    <None Include="Shaders\PBR\pbr.vert" />
     <None Include="Shaders\Phong.frag" />
     <None Include="Shaders\Phong.vert" />
     <None Include="Shaders\DebugShader\AlphaTest.frag" />

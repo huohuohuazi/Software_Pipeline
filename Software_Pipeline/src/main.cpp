@@ -107,6 +107,7 @@ Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 #pragma region 一个点光源
 
     glm::vec3 lightPos(0.0f,0.5f, 0.0f);
+    glm::vec3 lightColor(150.0f, 150.0f, 150.0f);
     //glm::vec3 lightColor(0.3f, 0.3f, 0.3f);
     //float K_ambient = 0.05; //4  32
 
@@ -564,12 +565,14 @@ int main(int argc, char* argv[])
         Shader cubeShadowMapDebugShader("Shaders/Shadow/cubeShadowMapDebug.vert", "Shaders/Shadow/cubeShadowMapDebug.frag");
 
 
-        //Shader BlingPhongShader("Shaders/Lighting/Bling_Phong.vert", "Shaders/Lighting/Bling_Phong.frag");
-
-
         // GBuffer
         Shader GBufferGeometryShader("Shaders/Gbuffer/GeometryProcess.vert", "Shaders/Gbuffer/GeometryProcess.frag");
         Shader GBufferLightingShader("Shaders/Gbuffer/LightingProcess.vert", "Shaders/Gbuffer/LightingProcess.frag");
+
+        // PBR
+        Shader pbrShader("Shaders/PBR/pbr.vert", "Shaders/PBR/pbr.frag");
+
+
 
 
     #pragma endregion
@@ -592,6 +595,12 @@ int main(int argc, char* argv[])
         };
 
         unsigned int skyboxTexture = LoadCubeTexture(skyboxPath);
+
+        unsigned int albedo = LoadTexture("resources/textures/PBR/rustediron2_basecolor.png");
+        unsigned int normal = LoadTexture("resources/textures/PBR/rustediron2_normal.png");
+        unsigned int metallic = LoadTexture("resources/textures/PBR/rustediron2_metallic.png");
+        unsigned int roughness = LoadTexture("resources/textures/PBR/rustediron2_roughness.png");
+        //unsigned int ao = LoadTexture("resources/textures/PBR/rusted_iron/rustediron2_basecolor.png");
 
    #pragma endregion
 
@@ -663,6 +672,15 @@ int main(int argc, char* argv[])
         //BlingPhongShader.use();
         //BlingPhongShader.setInt("texture_diffuse1", 0);
 
+
+        // PBR
+        pbrShader.use();
+        pbrShader.setInt("albedoMap", 0);
+        pbrShader.setInt("normalMap", 1);
+        pbrShader.setInt("metallicMap", 2);
+        pbrShader.setInt("roughnessMap", 3);
+        pbrShader.setInt("aoMap", 4);
+
         
 
     #pragma endregion
@@ -671,7 +689,7 @@ int main(int argc, char* argv[])
     #pragma region 模型信息
         
           //Model human("resources/objects/nanosuit/nanosuit.obj");
-          Model ball("resources/objects/ball.obj");
+          // Model ball("resources/objects/ball.obj");
            // Model planet("resources/objects/planet/planet.obj");
         
            // 天空球
@@ -855,6 +873,74 @@ int main(int argc, char* argv[])
                 1.0f,  1.0f,  1.0f, 1.0f
            };
    
+           // 球体
+           std::vector<glm::vec3> sphere_positions;
+           std::vector<glm::vec2> sphere_uv;
+           std::vector<glm::vec3> sphere_normals;
+           std::vector<unsigned int> sphere_indices;
+
+           const unsigned int X_SEGMENTS = 64;
+           const unsigned int Y_SEGMENTS = 64;
+           const float PI = 3.14159265359f;
+           unsigned int indexCount;
+
+           for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
+           {
+               for (unsigned int y = 0; y <= Y_SEGMENTS; ++y)
+               {
+                   float xSegment = (float)x / (float)X_SEGMENTS;
+                   float ySegment = (float)y / (float)Y_SEGMENTS;
+                   float xPos = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+                   float yPos = std::cos(ySegment * PI);
+                   float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+
+                   sphere_positions.push_back(glm::vec3(xPos, yPos, zPos));
+                   sphere_uv.push_back(glm::vec2(xSegment, ySegment));
+                   sphere_normals.push_back(glm::vec3(xPos, yPos, zPos));
+               }
+           }
+
+           bool oddRow = false;
+           for (unsigned int y = 0; y < Y_SEGMENTS; ++y)
+           {
+               if (!oddRow) // even rows: y == 0, y == 2; and so on
+               {
+                   for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
+                   {
+                       sphere_indices.push_back(y * (X_SEGMENTS + 1) + x);
+                       sphere_indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+                   }
+               }
+               else
+               {
+                   for (int x = X_SEGMENTS; x >= 0; --x)
+                   {
+                       sphere_indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+                       sphere_indices.push_back(y * (X_SEGMENTS + 1) + x);
+                   }
+               }
+               oddRow = !oddRow;
+           }
+           indexCount = static_cast<unsigned int>(sphere_indices.size());
+
+           std::vector<float> sphere_data;
+           for (unsigned int i = 0; i < sphere_positions.size(); ++i)
+           {
+               sphere_data.push_back(sphere_positions[i].x);
+               sphere_data.push_back(sphere_positions[i].y);
+               sphere_data.push_back(sphere_positions[i].z);
+               if (sphere_normals.size() > 0)
+               {
+                   sphere_data.push_back(sphere_normals[i].x);
+                   sphere_data.push_back(sphere_normals[i].y);
+                   sphere_data.push_back(sphere_normals[i].z);
+               }
+               if (sphere_uv.size() > 0)
+               {
+                   sphere_data.push_back(sphere_uv[i].x);
+                   sphere_data.push_back(sphere_uv[i].y);
+               }
+           }
             
            // 四个点
          //       float pointVertices[] = {
@@ -874,6 +960,7 @@ int main(int argc, char* argv[])
          unsigned int planeVBO, planeVAO;
          unsigned int grassVBO, grassVAO;
          unsigned int screenVBO, screenVAO;
+         //unsigned int sphereVBO, sphereVAO;
         // unsigned int poiontsVBO, poiontsVAO;
 
          VBOmanager skybox(&skyboxVBO);
@@ -912,11 +999,22 @@ int main(int argc, char* argv[])
          screen.BindVAO(screenVAO);
          screen.addVertex(4, std::vector<int>{2, 2});// Pos*2 Texcoord*2
 
-         //VBOmanager points(&poiontsVBO);
-         //points.addStaticBuffer(pointVertices, sizeof(pointVertices));
-         //points.addVAO(&poiontsVAO);
-         //points.BindVAO(poiontsVAO);
-         //points.addVertex(6, std::vector<int>{2,3,1});// Pos*2 Color*3
+         unsigned int sphereVBO, sphereVAO, sphereEBO;
+         glGenBuffers(1, &sphereVBO);
+         glGenBuffers(1, &sphereEBO);
+         glGenVertexArrays(1, &sphereVAO);
+         glBindVertexArray(sphereVAO);
+         glBindBuffer(GL_ARRAY_BUFFER, sphereVBO);
+         glBufferData(GL_ARRAY_BUFFER, sphere_data.size() * sizeof(float), &sphere_data[0], GL_STATIC_DRAW);
+         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphereEBO);
+         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere_indices.size() * sizeof(unsigned int), &sphere_indices[0], GL_STATIC_DRAW);
+         unsigned int stride = (3 + 2 + 3) * sizeof(float);
+         glEnableVertexAttribArray(0);
+         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+         glEnableVertexAttribArray(1);
+         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+         glEnableVertexAttribArray(2);
+         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
 
 
     #pragma endregion
@@ -1130,7 +1228,7 @@ int main(int argc, char* argv[])
 
         #pragma endregion
 
-        #pragma region Pass1 : 从光源处深度采样depth map
+        #pragma region 从光源处深度采样depth map
 
             // 开启正面剔除，避免阴影漂浮
             glEnable(GL_CULL_FACE);
@@ -1154,32 +1252,26 @@ int main(int argc, char* argv[])
 
             // floor
             glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, -0.5f, 0.0));
             cubeShadowMapShader.setMat4("model", model);
             glBindVertexArray(planeVAO);
             glDrawArrays(GL_TRIANGLES, 0, 6);
             
 
-            // cubes
+            // cubes         
             model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
-            model = glm::scale(model, glm::vec3(0.5f));
+            model = glm::translate(model, glm::vec3(1.0f, 0.0f, 0.0));
+            model = glm::scale(model, glm::vec3(0.4f));
             cubeShadowMapShader.setMat4("model", model);
-            glBindVertexArray(cubeVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            //glBindVertexArray(cubeVAO);
+            //glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(sphereVAO);
+            glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
 
-            
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0));
-            model = glm::scale(model, glm::vec3(0.5f));
-            cubeShadowMapShader.setMat4("model", model);
-            glBindVertexArray(cubeVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-            
-
-            model = glm::mat4(1.0f);
+            /*model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0));
             model = glm::scale(model, glm::vec3(0.1f));
-            cubeShadowMapShader.setMat4("model", model);
+            cubeShadowMapShader.setMat4("model", model);*/
             //human.Draw(cubeShadowMapShader);
 
 
@@ -1213,7 +1305,7 @@ int main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-        #pragma region Pass2 : 阴影渲染
+        #pragma region 延迟渲染
 
             #pragma region GBuffer几何阶段
 
@@ -1230,6 +1322,7 @@ int main(int argc, char* argv[])
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, floorTexture);
                     model = glm::mat4(1.0f);
+                    model = glm::translate(model, glm::vec3(0.0f, -0.5f, 0.0));
                     GBufferGeometryShader.setMat4("model", model);
                     glBindVertexArray(planeVAO);
                     glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -1237,24 +1330,21 @@ int main(int argc, char* argv[])
                     // cubes
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, cubeTexture);
-                    model = glm::mat4(1.0f);
-                    model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
-                    model = glm::scale(model, glm::vec3(0.5f));
-                    GBufferGeometryShader.setMat4("model", model);
-                    glBindVertexArray(cubeVAO);
-                    glDrawArrays(GL_TRIANGLES, 0, 36);
+
 
                     model = glm::mat4(1.0f);
-                    model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0));
-                    model = glm::scale(model, glm::vec3(0.5f));
+                    model = glm::translate(model, glm::vec3(1.0f, 0.0f, 0.0));
+                    model = glm::scale(model, glm::vec3(0.4f));
                     GBufferGeometryShader.setMat4("model", model);
-                    glBindVertexArray(cubeVAO);
-                    glDrawArrays(GL_TRIANGLES, 0, 36);
+                    //glBindVertexArray(cubeVAO);
+                    //glDrawArrays(GL_TRIANGLES, 0, 36);
+                    glBindVertexArray(sphereVAO);
+                    glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
 
-                    model = glm::mat4(1.0f);
+                    /*model = glm::mat4(1.0f);
                     model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0));
                     model = glm::scale(model, glm::vec3(0.1f));
-                    GBufferGeometryShader.setMat4("model", model);
+                    GBufferGeometryShader.setMat4("model", model);*/
                     //human.Draw(GBufferGeometryShader);
 
 
@@ -1409,8 +1499,10 @@ int main(int argc, char* argv[])
             PointLightShader.setMat4("model", model);
             PointLightShader.setMat4("view", view);
             PointLightShader.setMat4("projection", projection);
-            glBindVertexArray(cubeVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            //glBindVertexArray(cubeVAO);
+            //glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(sphereVAO);
+            glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
 
         #pragma endregion
 
@@ -1419,7 +1511,8 @@ int main(int argc, char* argv[])
             float scale = 1.1f;
 
             // STEP : 0 : 画别的
-            // DrawOutline(outlineShader, 0, scale);
+            DrawOutline(outlineShader, 0, scale);
+
 
 
             if (On_OtherObject)
@@ -1467,24 +1560,57 @@ int main(int argc, char* argv[])
                 // 反射立方体
                 ReflectionShader.use();
                 glActiveTexture(GL_TEXTURE0);
-                glBindVertexArray(reflectioncubeVAO); 
+                //glBindVertexArray(reflectioncubeVAO); 
                 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(4.0f, 2.0f, 0.0f));
+                model = glm::translate(model, glm::vec3(4.0f, 0.0f, 0.0f));
+                model = glm::scale(model, glm::vec3(0.4));
                 ReflectionShader.setMat4("model", model);
                 ReflectionShader.setVec3("cameraPos", camera.Position);
                 glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
-
+                //glDrawArrays(GL_TRIANGLES, 0, 36);
+                glBindVertexArray(sphereVAO);
+                glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
 
                 // 折射
                 RefractionShader.use();
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
                 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(2.0f, 2.0f, 0.0f));
+                model = glm::translate(model, glm::vec3(5.0f, 0.0f, 0.0f));
+                model = glm::scale(model, glm::vec3(0.4));
                 RefractionShader.setMat4("model", model);
                 RefractionShader.setVec3("cameraPos", camera.Position);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
+                //glDrawArrays(GL_TRIANGLES, 0, 36);
+                glBindVertexArray(sphereVAO);
+                glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
+
+
+                // PBR材质球
+                pbrShader.use();
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+                model = glm::scale(model, glm::vec3(0.4));
+                pbrShader.setMat4("model", model);
+                pbrShader.setMat4("view", view);
+                pbrShader.setMat4("projection", projection);
+                pbrShader.setVec3("cameraPos", camera.Position);
+
+                pbrShader.setVec3("lightPositions",lightPos);
+                pbrShader.setVec3("lightColors", lightColor);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, albedo);
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, normal);
+                glActiveTexture(GL_TEXTURE2);
+                glBindTexture(GL_TEXTURE_2D, metallic);
+                glActiveTexture(GL_TEXTURE3);
+                glBindTexture(GL_TEXTURE_2D, roughness);
+                //glActiveTexture(GL_TEXTURE4);
+                //glBindTexture(GL_TEXTURE_2D, ao);
+                glBindVertexArray(sphereVAO);
+                glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
+
+
             }
 
            
@@ -1494,7 +1620,7 @@ int main(int argc, char* argv[])
 
         #pragma region 立方体及其描边
 
-            if (On_OtherObject)
+            if (false)
             {
                 // STEP : 1  :  pass1，绘制本体
                 DrawOutline(outlineShader, 1, scale);

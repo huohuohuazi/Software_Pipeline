@@ -139,5 +139,7 @@
     <None Include="Shaders\PostProcess\SSAO.frag" />
     <None Include="Shaders\PostProcess\SSAOblur.vert" />
     <None Include="Shaders\PostProcess\SSAOblur.frag" />
+    <None Include="Shaders\PBR\pbr.vert" />
+    <None Include="Shaders\PBR\pbr.frag" />
   </ItemGroup>
 </Project>
