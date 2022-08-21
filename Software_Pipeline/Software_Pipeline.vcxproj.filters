@@ -141,5 +141,9 @@
     <None Include="Shaders\PostProcess\SSAOblur.frag" />
     <None Include="Shaders\PBR\pbr.vert" />
     <None Include="Shaders\PBR\pbr.frag" />
+    <None Include="Shaders\PBR\environmentMap.vert" />
+    <None Include="Shaders\PBR\environmentMap.frag" />
+    <None Include="Shaders\PBR\HDRskybox.frag" />
+    <None Include="Shaders\PBR\HDRskybox.vert" />
   </ItemGroup>
 </Project>

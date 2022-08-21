@@ -13,7 +13,7 @@ uniform sampler2D albedoMap;
 uniform sampler2D normalMap;
 uniform sampler2D metallicMap;
 uniform sampler2D roughnessMap;
-uniform sampler2D aoMap;
+uniform sampler2D aoMap;// White
 
 // lights
 uniform vec3 lightPositions;
@@ -24,7 +24,7 @@ uniform vec3 cameraPos;
 const float PI = 3.14159265359;
 
 
-// Get Normal Map From 
+// Normal Map : Tangent Space -> World Space
 vec3 getNormalFromMap()
 {
     vec3 tangentNormal = texture(normalMap, frag_in.TexCoords).xyz * 2.0 - 1.0;
@@ -137,12 +137,12 @@ void main()
     
     // Ambient
     vec3 ambient = vec3(0.03) * albedo * ao;
-    ambient =vec3(0.03) * albedo ;
+    ambient =vec3(0.03) * albedo ;// 记得加上一张全白色的ao Map
     vec3 color = ambient + Lo;
 
     // HDR tone mapping & Gamma correct
     color = color / (color + vec3(1.0));
-    color = pow(color, vec3(1.0/2.2)); 
+    // color = pow(color, vec3(1.0/2.2)); 
 
     FragColor = vec4(color, 1.0);
     //FragColor=vec4(vec3(metallic),1.0);

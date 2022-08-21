@@ -45,12 +45,14 @@
     void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
     void processInput(GLFWwindow* window);
     unsigned int LoadTexture(char const* path);
+    unsigned int LoadHDRPTexture(char const* path);
     void DrawOutline(Shader ourlineShader, int step, float& scale, float targetScale = 1.1);
     // void DrawOutline(Shader ourlineShader, int step, float& scale);
     unsigned int CreateEmptyTexture(bool HDR);
     unsigned int CreateDepthFrameTexture();
-    unsigned int LoadCubeTexture(vector<string> textures_faces);
+    unsigned int LoadCubeTexture(vector<string> textures_faces,bool hdrTexture=false);
     unsigned int CreateDepthCubeTexture(); 
+    unsigned int CreateEnvironmentCubeTexture();
     unsigned int lerp(GLfloat a, GLfloat b, GLfloat f);
 
 #pragma endregion
@@ -455,6 +457,28 @@ int main(int argc, char* argv[])
 
         #pragma endregion
 
+        #pragma region environmentFBO，用于立方体贴图
+
+            // skyboxCubeFBO
+            unsigned  int environmentFBO;
+            glGenFramebuffers(1, &environmentFBO);
+            glBindFramebuffer(GL_FRAMEBUFFER, environmentFBO);
+
+            // RBO : 深度缓冲
+            unsigned int environmentRBO;
+            glGenRenderbuffers(1, &environmentRBO);
+            glBindRenderbuffer(GL_RENDERBUFFER, environmentRBO);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, environmentRBO);
+
+            // 立方体贴图
+            unsigned int environmentMapCBO= CreateEnvironmentCubeTexture();
+            //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, environmentMapCBO, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+        #pragma endregion
+
         
         #pragma region BloomFBO，用于泛光
 
@@ -520,7 +544,7 @@ int main(int argc, char* argv[])
 
     #pragma endregion
 
-    
+
 
     #pragma region 加载Shader
 
@@ -536,7 +560,9 @@ int main(int argc, char* argv[])
 
 
         // 天空球
-        Shader SkyboxShader("Shaders/DebugShader/Skybox.vert", "Shaders/DebugShader/Skybox.frag");
+        // Shader SkyboxShader("Shaders/DebugShader/Skybox.vert", "Shaders/DebugShader/Skybox.frag");
+        Shader environmentMapShader("Shaders/PBR/environmentMap.vert", "Shaders/PBR/environmentMap.frag");
+        Shader HDRskyboxShader("Shaders/PBR/HDRskybox.vert", "Shaders/PBR/HDRskybox.frag");
 
         // 后处理
         Shader PostShader("Shaders/PostProcess/PostProcess.vert", "Shaders/PostProcess/PostProcess.frag");
@@ -584,7 +610,7 @@ int main(int argc, char* argv[])
         //unsigned int grassTexture = LoadTexture("resources/textures/grass.png");
         unsigned int windowTexture = LoadTexture("resources/textures/window.png");
 
-        vector<std::string> skyboxPath
+        /*vector<std::string> skyboxPath
         {
             "resources/textures/skybox/right.jpg",
             "resources/textures/skybox/left.jpg",
@@ -592,9 +618,10 @@ int main(int argc, char* argv[])
             "resources/textures/skybox/bottom.jpg",
             "resources/textures/skybox/front.jpg",
             "resources/textures/skybox/back.jpg"
-        };
+        };*/
 
-        unsigned int skyboxTexture = LoadCubeTexture(skyboxPath);
+        //unsigned int skyboxTexture = LoadCubeTexture(skyboxPath);
+        unsigned int HDRskyboxTexture = LoadHDRPTexture("resources/textures/HDRP/Alexs_Apt_2k.hdr");
 
         unsigned int albedo = LoadTexture("resources/textures/PBR/rustediron2_basecolor.png");
         unsigned int normal = LoadTexture("resources/textures/PBR/rustediron2_normal.png");
@@ -660,8 +687,12 @@ int main(int argc, char* argv[])
         
 
         // 天空球
-        SkyboxShader.use();
-        SkyboxShader.setInt("skybox", 0);
+       /* SkyboxShader.use();
+        SkyboxShader.setInt("skybox", 0);*/
+        environmentMapShader.use();
+        environmentMapShader.setInt("environmentTexture", 0);
+        HDRskyboxShader.use();
+        HDRskyboxShader.setInt("environmentMap", 0);
 
         // 反射/折射Shader
         ReflectionShader.use();
@@ -1105,7 +1136,7 @@ int main(int argc, char* argv[])
     #pragma endregion
         */
     
-        #pragma region SSAO
+    #pragma region SSAO
 
              // ssaoKernel包括64个随机方向
             
@@ -1150,6 +1181,42 @@ int main(int argc, char* argv[])
              glBindTexture(GL_TEXTURE_2D, 0);
 
         #pragma endregion
+
+    #pragma region environmentMap
+
+             glm::mat4 environmentMapProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+             glm::mat4 environmentMapViews[] =
+             {
+                glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+                glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+                glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+                glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+                glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+                glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+             };
+
+             environmentMapShader.use();
+             environmentMapShader.setInt("environmentMap", 0);
+             environmentMapShader.setMat4("projection", environmentMapProjection);
+             glActiveTexture(GL_TEXTURE0);
+             glBindTexture(GL_TEXTURE_2D, HDRskyboxTexture);
+
+             glViewport(0, 0, 512, 512);
+             glBindFramebuffer(GL_FRAMEBUFFER, environmentFBO);
+
+             for (unsigned int i = 0; i < 6; ++i)
+             {
+                 // 将六张环境贴图采样至 立方体贴图environmentTexture 上
+                 environmentMapShader.setMat4("view", environmentMapViews[i]);
+                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, environmentMapCBO, 0);
+                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                 glBindVertexArray(cubeVAO);
+                 glDrawArrays(GL_TRIANGLES, 0, 36);
+             }
+             glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    #pragma endregion
+
 
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -1299,6 +1366,8 @@ int main(int argc, char* argv[])
 
         #pragma endregion
       
+
+
         // 返回相机空间
         glViewport(0, 0, Width, Height);
         glBindFramebuffer(GL_FRAMEBUFFER, FBO);
@@ -1557,32 +1626,32 @@ int main(int argc, char* argv[])
                */
 
 
-                // 反射立方体
-                ReflectionShader.use();
-                glActiveTexture(GL_TEXTURE0);
-                //glBindVertexArray(reflectioncubeVAO); 
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(4.0f, 0.0f, 0.0f));
-                model = glm::scale(model, glm::vec3(0.4));
-                ReflectionShader.setMat4("model", model);
-                ReflectionShader.setVec3("cameraPos", camera.Position);
-                glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
-                //glDrawArrays(GL_TRIANGLES, 0, 36);
-                glBindVertexArray(sphereVAO);
-                glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
+                //// 反射立方体
+                //ReflectionShader.use();
+                //glActiveTexture(GL_TEXTURE0);
+                ////glBindVertexArray(reflectioncubeVAO); 
+                //model = glm::mat4(1.0f);
+                //model = glm::translate(model, glm::vec3(4.0f, 0.0f, 0.0f));
+                //model = glm::scale(model, glm::vec3(0.4));
+                //ReflectionShader.setMat4("model", model);
+                //ReflectionShader.setVec3("cameraPos", camera.Position);
+                //glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+                ////glDrawArrays(GL_TRIANGLES, 0, 36);
+                //glBindVertexArray(sphereVAO);
+                //glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
 
-                // 折射
-                RefractionShader.use();
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(5.0f, 0.0f, 0.0f));
-                model = glm::scale(model, glm::vec3(0.4));
-                RefractionShader.setMat4("model", model);
-                RefractionShader.setVec3("cameraPos", camera.Position);
-                //glDrawArrays(GL_TRIANGLES, 0, 36);
-                glBindVertexArray(sphereVAO);
-                glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
+                //// 折射
+                //RefractionShader.use();
+                //glActiveTexture(GL_TEXTURE0);
+                //glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+                //model = glm::mat4(1.0f);
+                //model = glm::translate(model, glm::vec3(5.0f, 0.0f, 0.0f));
+                //model = glm::scale(model, glm::vec3(0.4));
+                //RefractionShader.setMat4("model", model);
+                //RefractionShader.setVec3("cameraPos", camera.Position);
+                ////glDrawArrays(GL_TRIANGLES, 0, 36);
+                //glBindVertexArray(sphereVAO);
+                //glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
 
 
                 // PBR材质球
@@ -1676,15 +1745,15 @@ int main(int argc, char* argv[])
             {
                // 天空球在透明物体前面
                 glDepthFunc(GL_LEQUAL);
-                SkyboxShader.use();
-                glBindVertexArray(skyboxVAO);
+                HDRskyboxShader.use();
+                glBindVertexArray(cubeVAO);
                 //glActiveTexture(GL_TEXTURE0);
-               // // 让w分量恒为1
+                // // 让w分量恒为1
                 view = glm::mat4(glm::mat3(camera.GetView())); // remove translation from the view matrix
-                SkyboxShader.setMat4("view", view);
-                SkyboxShader.setMat4("projection", projection);
+                HDRskyboxShader.setMat4("view", view);
+                HDRskyboxShader.setMat4("projection", projection);
                 glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapCBO);
                 glDrawArrays(GL_TRIANGLES, 0, 36);
                 glBindVertexArray(0);
                 glDepthFunc(GL_LESS);
@@ -1776,7 +1845,7 @@ int main(int argc, char* argv[])
                 glBindVertexArray(screenVAO);
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, CBO[0]);
-                //glBindTexture(GL_TEXTURE_2D,);
+                //glBindTexture(GL_TEXTURE_2D,HDRskyboxTexture);
                 if (On_Bloom)
                 {
                     glActiveTexture(GL_TEXTURE1);
@@ -1877,8 +1946,51 @@ unsigned int LoadTexture(char const* path)
     
 }
 
+// 加载HDRP图片至显存
+unsigned int LoadHDRPTexture(char const* path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+
+    if (data)
+    {
+        GLenum format = GL_RGB;
+
+        if (nrComponents == 1)// 灰度图
+            format = GL_R16F;
+        else if (nrComponents == 3)// RGB图
+            format = GL_RGB16F;
+        else if (nrComponents == 4)// RGBA图
+            format = GL_RGBA16F;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+        std::cout << "Load Texture SUCCESS : " << path << " , channels = " << nrComponents << " ,ID=" << textureID << std::endl;
+    }
+    else
+    {
+        std::cout << "Load Texture Failed! " << path << std::endl;
+        stbi_image_free(data);
+    }
+    return textureID;
+    //}
+
+
+}
+
 // 加载立方体贴图
-unsigned int LoadCubeTexture(vector<string> textures_faces)
+unsigned int LoadCubeTexture(vector<string> textures_faces,bool hdrTexture)
 {
     unsigned int textureID;
     glGenTextures(1, &textureID);
@@ -1927,7 +2039,6 @@ unsigned int LoadCubeTexture(vector<string> textures_faces)
     std::cout << "Load CubeTexture SUCCESS! " << " ,ID=" << textureID << std::endl;
     return textureID;
 }
-
 
 // 帧缓冲对象FBO Width * Height
 unsigned int CreateEmptyTexture(bool HDR)
@@ -2000,7 +2111,27 @@ unsigned int CreateDepthCubeTexture()
     return depthCubemapID;
 }
 
+// 立方体颜色缓冲对象 6 * 512 * 512 (天空球分辨率)
+unsigned int CreateEnvironmentCubeTexture()
+{
 
+    unsigned int environmentCubeID;
+    glGenTextures(1, &environmentCubeID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, environmentCubeID);
+    for (unsigned int i = 0; i < 6; ++i)
+    {
+        // note that we store each face with 16 bit floating point values
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,512, 512, 0, GL_RGB, GL_FLOAT, NULL);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    std::cout << "Load Empty Depth environment Cube SUCCESS! " << " ,ID=" << environmentCubeID << std::endl;
+    return environmentCubeID;
+}
 
 // 输出当前信息
 void DisplayCurrentState()
