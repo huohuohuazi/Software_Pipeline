@@ -198,8 +198,12 @@
     <None Include="Shaders\PBR\environmentMap.vert" />
     <None Include="Shaders\PBR\HDRskybox.frag" />
     <None Include="Shaders\PBR\HDRskybox.vert" />
+    <None Include="Shaders\PBR\irradianceMap.frag" />
+    <None Include="Shaders\PBR\irradianceMap.vert" />
     <None Include="Shaders\PBR\pbr.frag" />
     <None Include="Shaders\PBR\pbr.vert" />
+    <None Include="Shaders\PBR\prefilterMap.frag" />
+    <None Include="Shaders\PBR\prefilterMap.vert" />
     <None Include="Shaders\Phong.frag" />
     <None Include="Shaders\Phong.vert" />
     <None Include="Shaders\DebugShader\AlphaTest.frag" />

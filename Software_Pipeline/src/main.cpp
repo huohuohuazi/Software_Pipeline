@@ -52,7 +52,7 @@
     unsigned int CreateDepthFrameTexture();
     unsigned int LoadCubeTexture(vector<string> textures_faces,bool hdrTexture=false);
     unsigned int CreateDepthCubeTexture(); 
-    unsigned int CreateEnvironmentCubeTexture();
+    unsigned int CreateEnvironmentCubeTexture(int size,bool mipmap=false);
     unsigned int lerp(GLfloat a, GLfloat b, GLfloat f);
 
 #pragma endregion
@@ -472,10 +472,17 @@ int main(int argc, char* argv[])
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, environmentRBO);
 
             // 立方体贴图
-            unsigned int environmentMapCBO= CreateEnvironmentCubeTexture();
+            unsigned int environmentMapCBO= CreateEnvironmentCubeTexture(512);
             //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, environmentMapCBO, 0);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+            // 辐射度贴图
+            unsigned int irradianceMapCBO = CreateEnvironmentCubeTexture(32);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            // 预滤波HDR环境贴图
+            unsigned int prefilterMapCBO = CreateEnvironmentCubeTexture(128,true);// 生成mipmap
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         #pragma endregion
 
@@ -597,6 +604,8 @@ int main(int argc, char* argv[])
 
         // PBR
         Shader pbrShader("Shaders/PBR/pbr.vert", "Shaders/PBR/pbr.frag");
+        Shader irradianceMapShader("Shaders/PBR/irradianceMap.vert", "Shaders/PBR/irradianceMap.frag");
+        Shader prefilterMapShader("Shaders/PBR/prefilterMap.vert", "Shaders/PBR/prefilterMap.frag");
 
 
 
@@ -710,9 +719,13 @@ int main(int argc, char* argv[])
         pbrShader.setInt("normalMap", 1);
         pbrShader.setInt("metallicMap", 2);
         pbrShader.setInt("roughnessMap", 3);
-        pbrShader.setInt("aoMap", 4);
+        pbrShader.setInt("aoMap", 4); 
+        pbrShader.setInt("irradianceMap", 5);
 
-        
+        irradianceMapShader.use();
+        irradianceMapShader.setInt("environmentMap", 0);
+        prefilterMapShader.use();
+        prefilterMapShader.setInt("environmentMap", 0);
 
     #pragma endregion
 
@@ -1184,6 +1197,8 @@ int main(int argc, char* argv[])
 
     #pragma region environmentMap
 
+             // 采样环境贴图
+             std::cout << "Sampling EnvironmentTexture..." << endl;
              glm::mat4 environmentMapProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
              glm::mat4 environmentMapViews[] =
              {
@@ -1206,7 +1221,7 @@ int main(int argc, char* argv[])
 
              for (unsigned int i = 0; i < 6; ++i)
              {
-                 // 将六张环境贴图采样至 立方体贴图environmentTexture 上
+                 // 将六张环境贴图采样至 立方体贴图environmentMapCBO 上
                  environmentMapShader.setMat4("view", environmentMapViews[i]);
                  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, environmentMapCBO, 0);
                  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1214,6 +1229,63 @@ int main(int argc, char* argv[])
                  glDrawArrays(GL_TRIANGLES, 0, 36);
              }
              glBindFramebuffer(GL_FRAMEBUFFER, 0);
+             // 至此，环境贴图保存为立方体贴图environmentMapCBO
+
+             // 采样辐射度贴图  -->  irradianceMapCBO
+             std::cout << "Sampling Irradiance Map..." << endl;
+             irradianceMapShader.use();
+             irradianceMapShader.setMat4("projection", environmentMapProjection);
+             glActiveTexture(GL_TEXTURE0);
+             glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapCBO);
+
+             glViewport(0, 0, 32, 32);
+             glBindFramebuffer(GL_FRAMEBUFFER, environmentFBO);
+             for (unsigned int i = 0; i < 6; ++i)
+             {
+                 irradianceMapShader.setMat4("view", environmentMapViews[i]);
+                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceMapCBO, 0);
+                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                 glBindVertexArray(cubeVAO);
+                 glDrawArrays(GL_TRIANGLES, 0, 36);
+             }
+             glBindFramebuffer(GL_FRAMEBUFFER, 0);
+             // 至此，环境贴图的卷积结果保存至 irradianceMapCBO中
+
+             // 预卷积辐射度贴图  -->  prefilterMapCBO
+             std::cout << "Sampling prefilter Map..." << endl;
+             prefilterMapShader.use();
+             prefilterMapShader.setMat4("projection", environmentMapProjection);
+             glActiveTexture(GL_TEXTURE0);
+             glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapCBO);
+
+             glBindFramebuffer(GL_FRAMEBUFFER, environmentFBO);
+             unsigned int maxMipLevels = 5;// 6级mipmap
+             for (unsigned int mip = 0; mip < maxMipLevels; ++mip)
+             {
+                 // reisze framebuffer
+                 unsigned int mipWidth = 128 * std::pow(0.5, mip);
+                 unsigned int mipHeight = 128 * std::pow(0.5, mip);
+
+                 glBindRenderbuffer(GL_RENDERBUFFER, environmentRBO);
+                 glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
+                 glViewport(0, 0, mipWidth, mipHeight);
+
+                 float roughness = (float)mip / (float)(maxMipLevels - 1);
+                 prefilterMapShader.setFloat("roughness", roughness);
+                 for (unsigned int i = 0; i < 6; ++i)
+                 {
+                     prefilterMapShader.setMat4("view", environmentMapViews[i]);
+                     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, prefilterMapCBO, mip);
+                     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                     glBindVertexArray(cubeVAO);
+                     glDrawArrays(GL_TRIANGLES, 0, 36);
+                 }
+             }
+             glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 
     #pragma endregion
 
@@ -1674,6 +1746,8 @@ int main(int argc, char* argv[])
                 glBindTexture(GL_TEXTURE_2D, metallic);
                 glActiveTexture(GL_TEXTURE3);
                 glBindTexture(GL_TEXTURE_2D, roughness);
+                glActiveTexture(GL_TEXTURE5);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMapCBO);
                 //glActiveTexture(GL_TEXTURE4);
                 //glBindTexture(GL_TEXTURE_2D, ao);
                 glBindVertexArray(sphereVAO);
@@ -1753,7 +1827,7 @@ int main(int argc, char* argv[])
                 HDRskyboxShader.setMat4("view", view);
                 HDRskyboxShader.setMat4("projection", projection);
                 glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapCBO);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMapCBO);
                 glDrawArrays(GL_TRIANGLES, 0, 36);
                 glBindVertexArray(0);
                 glDepthFunc(GL_LESS);
@@ -2111,8 +2185,8 @@ unsigned int CreateDepthCubeTexture()
     return depthCubemapID;
 }
 
-// 立方体颜色缓冲对象 6 * 512 * 512 (天空球分辨率)
-unsigned int CreateEnvironmentCubeTexture()
+// 立方体颜色缓冲对象 6 * size * size (天空球/环境球/卷积后分辨率)
+unsigned int CreateEnvironmentCubeTexture(int size,bool mipmap)
 {
 
     unsigned int environmentCubeID;
@@ -2121,15 +2195,27 @@ unsigned int CreateEnvironmentCubeTexture()
     for (unsigned int i = 0; i < 6; ++i)
     {
         // note that we store each face with 16 bit floating point values
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,512, 512, 0, GL_RGB, GL_FLOAT, NULL);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, size, size, 0, GL_RGB, GL_FLOAT, NULL);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    if (mipmap)
+    {
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+    }
+    else
+    {
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    }
+
     std::cout << "Load Empty Depth environment Cube SUCCESS! " << " ,ID=" << environmentCubeID << std::endl;
+   
     return environmentCubeID;
 }
 

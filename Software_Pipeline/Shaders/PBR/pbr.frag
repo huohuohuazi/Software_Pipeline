@@ -14,6 +14,7 @@ uniform sampler2D normalMap;
 uniform sampler2D metallicMap;
 uniform sampler2D roughnessMap;
 uniform sampler2D aoMap;// White
+uniform samplerCube irradianceMap;
 
 // lights
 uniform vec3 lightPositions;
@@ -93,17 +94,21 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 
 
 // L0(p,w0)=Sigma( (Kdiffuse * c  /pi  +  Kspecular * D F G / (w0 * n)*(Wi * n)  ) * Li(p , wi) * n * wi  )dwi
+
 // c = albedo , Ks - specular , Kd - diffuse , Li - LightPower (radiance)
 // n = normal , wi = L = lightDirection , w0 = V = viewDirection
 void main()
 {		
+    vec3 N = getNormalFromMap(); // normal
+    vec3 V = normalize(cameraPos - frag_in.WorldPos);// w0 = viewDirection
+
     vec3 albedo     = pow(texture(albedoMap, frag_in.TexCoords).rgb, vec3(2.2));
     float metallic  = texture(metallicMap, frag_in.TexCoords).r;
     float roughness = texture(roughnessMap, frag_in.TexCoords).r;
     float ao        = texture(aoMap, frag_in.TexCoords).r;
-
-    vec3 N = getNormalFromMap(); // normal
-    vec3 V = normalize(cameraPos - frag_in.WorldPos);// w0 = viewDirection
+    vec3 irradiance = texture(irradianceMap, N).rgb;
+    vec3 diffuse      = irradiance * albedo;
+ 
  
     vec3 F0 = vec3(0.04); // Basic Reclection rate of plane
     F0 = mix(F0, albedo, metallic);// F0 = F0 * (1-matallic) + albedo * matallic;
@@ -136,14 +141,20 @@ void main()
     //}   
     
     // Ambient
-    vec3 ambient = vec3(0.03) * albedo * ao;
-    ambient =vec3(0.03) * albedo ;// 记得加上一张全白色的ao Map
+    vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
+    vec3 kD = 1.0 - kS;
+    kD *= 1.0 - metallic;
+    
+    vec3 ambient = (kD * diffuse) * vec3(1.0);
+    //ambient = diffuse;
+    //vec3 ambient = vec3(0.03) * albedo * ao;// 记得加上一张全白色的ao Map
+    //vec3 ambient =vec3(0.03) * albedo ;
+    
     vec3 color = ambient + Lo;
-
     // HDR tone mapping & Gamma correct
     color = color / (color + vec3(1.0));
     // color = pow(color, vec3(1.0/2.2)); 
 
     FragColor = vec4(color, 1.0);
-    //FragColor=vec4(vec3(metallic),1.0);
+    //FragColor=vec4(irradiance,1.0);
 }

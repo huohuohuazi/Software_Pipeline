@@ -8,9 +8,10 @@ uniform samplerCube environmentMap;
 
 void main()
 {
-    // Sample from a point
-    vec3 envColor = texture(environmentMap, Position).rgb;
+    //vec3 envColor = texture(environmentMap, Position).rgb;
+    vec3 envColor = textureLod(environmentMap, Position,1.2).rgb;// Sample the mipmap
     // In Skybox.frag : FragColor = texture(skybox, TexCoords);
+
 
     // gamacorrection
     //envColor = envColor / (envColor + vec3(1.0));
